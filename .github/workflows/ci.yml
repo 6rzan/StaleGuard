@@ -36,3 +36,30 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build app
+      - run: docker compose up -d app
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8000/api/health && exit 0
+            sleep 1
+          done
+          docker compose logs app
+          exit 1
+      - name: Assert container behaviour
+        run: |
+          fail() { echo "FAIL: $1"; docker compose logs app; exit 1; }
+          curl -sf http://127.0.0.1:8000/api/health | grep -Eq '"mode": ?"mock"' || fail "health mode is not mock"
+          curl -sf http://127.0.0.1:8000/ | grep -q StaleGuard || fail "GET / has no StaleGuard"
+          code=$(curl -s -o body.json -w '%{http_code}' -X POST 'http://127.0.0.1:8000/api/checks?wait=true' \
+            -H 'Content-Type: application/json' \
+            -d '{"answer": "The Pro plan costs $20 per month per user."}')
+          [ "$code" = 200 ] || fail "POST /api/checks returned $code"
+          grep -Eq '"status": ?"done"' body.json || fail "check status is not done"
+      - if: always()
+        run: docker compose down -v
