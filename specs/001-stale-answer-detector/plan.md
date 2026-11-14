@@ -88,7 +88,7 @@ One table: `checks(id TEXT PRIMARY KEY, created_at TEXT, data TEXT)` where `data
 
 ## Config (`.env`)
 
-`MOCK_MODE`, `BIFROST_BASE_URL`, `BIFROST_API_KEY` (optional), `BIFROST_VIRTUAL_KEY` (optional), `MODEL_EXTRACT`, `MODEL_JUDGE`, `MODEL_ANSWER`, `MODEL_FALLBACKS`, `TAVILY_API_KEY`, `MAX_CLAIMS`, `DATABASE_PATH`. Provider keys (`OPENAI_API_KEY`, …) are read by Bifrost, never by the app.
+`MOCK_MODE`, `BIFROST_BASE_URL`, `BIFROST_API_KEY` (optional), `BIFROST_VIRTUAL_KEY` (optional), `MODEL_EXTRACT`, `MODEL_JUDGE`, `MODEL_ANSWER`, `MODEL_FALLBACKS`, `TAVILY_API_KEY`, `MAX_CLAIMS`, `DATABASE_PATH`, `CACHE_ENABLED` (post-MVP, T023). Provider keys (`OPENAI_API_KEY`, …) are read by Bifrost, never by the app.
 
 ## Demo story
 

@@ -28,7 +28,8 @@ type Health = {
 
 type Sample = { id: string; title: string; question: string | null; answer: string };
 
-// Exactly one of answer / question is required. answer: 1..8000 chars.
+// At least one of answer / question is required. answer: 1..8000 chars.
+// Both given: answer is checked and question is stored with it.
 // question without answer = "ask mode" (post-MVP): the answer is generated first.
 type CheckRequest = { answer?: string; question?: string };
 

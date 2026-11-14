@@ -47,10 +47,16 @@ For outdated claims the system offers a rewritten answer with the current values
 - **FR-009** Mock mode: no network, deterministic output, labelled in API and UI.
 - **FR-010** Input limits: answer 1–8000 chars; reject otherwise with 422.
 
+## Edge cases
+
+- No time-sensitive claim found: the check finishes `done` with `overall_score=null`; the UI says so instead of showing an empty result.
+- More flagged claims than `MAX_CLAIMS`: the rest are `skipped`; ties within a volatility level keep answer order.
+- Search or model failure on one claim: that claim is `error`, the rest finish (FR-007).
+
 ## Success criteria
 
 - **SC-001** The three bundled sample answers produce the expected verdicts in mock mode (tested).
-- **SC-002** A full check in mock mode finishes in < 3 s; in live mode with 8 claims in < 45 s.
+- **SC-002** A full check in mock mode finishes in < 3 s; in live mode with 8 claims in < 45 s. Measured at review and recorded in validation.md.
 - **SC-003** `pytest` and the frontend build pass with no keys set.
 - **SC-004** The UI works at 375 px width with zero console errors.
 

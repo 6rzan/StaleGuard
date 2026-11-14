@@ -27,7 +27,7 @@ Inputs: [spec.md](spec.md), [plan.md](plan.md), [contracts/api.md](contracts/api
 - [ ] T008 [Taha] `app/llm.py`: `BifrostLLM` — per-stage model, `fallbacks`, optional virtual key, usage + served-by capture, JSON parse with one retry
 - [ ] T009 [Taha] `app/search.py`: `TavilySearch` — topic by category, published dates, maps results to `Evidence`
 - [ ] T010 [Taha] `app/pipeline.py`: `run_check` — extract → flag → search → judge → score, concurrent, persists progress, per-claim error isolation
-- [ ] T011 [Taha] Routes in `app/main.py`: `POST /api/checks` (+`wait`), `GET /api/checks`, `GET /api/checks/{id}`, `GET /api/samples`, CORS for the Vite dev origin, serve `frontend/dist` when it exists
+- [ ] T011 [Taha] Routes in `app/main.py`: `POST /api/checks` (+`wait`), `GET /api/checks`, `GET /api/checks/{id}`, `GET /api/samples`, input limits (FR-010), CORS for the Vite dev origin, serve `frontend/dist` when it exists
 
 ## Phase 3 — Agents, mocks, tests
 
@@ -54,7 +54,7 @@ Inputs: [spec.md](spec.md), [plan.md](plan.md), [contracts/api.md](contracts/api
 - [ ] T024 [Taha] `Dockerfile` (build frontend, serve from FastAPI) and `docker-compose.yml` (app + bifrost with `bifrost/config.json` reading provider keys from env); `docker compose up` works in mock mode with no keys
 - [ ] T025 [Saadat] `app/smoke.py` (`python -m app.smoke`): one real Bifrost call and one real Tavily call, PASS/FAIL per integration with a clear hint; tests for T021–T023
 - [ ] T026 [Alaa] UI: ask-mode toggle, corrected-answer panel with copy, export report (Markdown), cached indicator
-- [ ] T027 [Alaa] UI polish: motion on score reveal, empty state, phone-width pass, zero console errors
+- [ ] T027 [Alaa] UI polish: motion on score reveal, empty and no-claims states, sponsor roles named in the UI (sources "via Tavily", models "via Bifrost"), phone-width pass, zero console errors
 
 ## Phase 6 — Ship
 
