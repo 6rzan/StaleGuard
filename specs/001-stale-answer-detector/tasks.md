@@ -63,6 +63,13 @@ Inputs: [spec.md](spec.md), [plan.md](plan.md), [contracts/api.md](contracts/api
 - [x] T030 [Esam] Pitch deck (pptx + PDF) and demo video script in `docs/pitch/`
 - [x] T031 [Esam] Good-first issues, `v0.1.0` tag after CI is green
 
+## Phase 7 — Team requests after v0.1.0
+
+- [x] T032 [Taha] Live providers: Groq `openai/gpt-oss-120b` for extract, judge and rewrite; xAI `grok-4.7` for ask-mode answers and as fallback; served-by parsing for slashed model ids
+- [x] T033 [Taha] Bifrost virtual key for the app (allowed models, daily budget, rate limit), setup token pass-through
+- [x] T034 [Alaa] Frontend redesign after the UI UX Pro Max developer-tools template, built with the `ui-ux-pro-max` and `impeccable` skills
+- [x] T035 [Esam] Re-record demo media, rebuild the pitch deck in the new theme, docs for Groq/xAI and Docker in WSL
+
 ## Coverage (PS06 → tasks)
 
 | Requirement | Tasks |
