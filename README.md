@@ -345,8 +345,8 @@ More in [docs/TEAM.md](docs/TEAM.md).
 
 ## Limitations and what is next
 
-- Verified live on 15 Nov 2026 with real Groq and Tavily keys: `make smoke` passes all three lines, and full checks ran through the UI and through ask mode. Not verified yet: the failover to `groq/openai/gpt-oss-20b`, which the Groq project has to enable first.
-- Groq's free tier allows about 8,000 tokens per minute on `gpt-oss-120b`, so back-to-back checks can hit HTTP 429. The app retries, and the gateway fails over to `gpt-oss-20b` once that model is enabled in the Groq project. Leave about a minute between live checks on the free tier.
+- Verified live on 15 Nov 2026 with real Groq and Tavily keys: `make smoke` passes all three lines, and full checks ran through the UI and through ask mode. The failover was verified too: in a burst of 8 concurrent requests Groq rate-limited 3 on `gpt-oss-120b` and the gateway served them from `gpt-oss-20b`, all 8 succeeded; in a real check the judge call was served by `gpt-oss-20b` and the UI tagged it "fallback".
+- Groq's free tier allows about 8,000 tokens per minute per model. The app retries on HTTP 429 and the gateway fails over from `gpt-oss-120b` to `gpt-oss-20b`; if both models are exhausted in the same minute a claim can still end with an error, so leave about a minute between back-to-back live checks.
 - English only. The prompts and the mock rules assume English text.
 - No authentication and no users. Anyone who can reach the port can run checks, and in live mode that spends your keys. The Compose file publishes ports on 127.0.0.1 only. Do not expose it more widely without adding auth.
 - Live quality depends on the models you configure. A weaker model can miss claims or misjudge a source, and Tavily's snippets are short, so some claims end as `unverified`.

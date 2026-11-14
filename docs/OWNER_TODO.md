@@ -58,7 +58,7 @@ To open the Bifrost dashboard (needed for the demo video):
 
 Passed on 15 Nov 2026 with real keys: bifrost (served by `groq/openai/gpt-oss-120b`, about 1.3 s), tavily (5 results) and check all PASS. Re-run it if you change keys or models.
 
-To do: enable `openai/gpt-oss-20b` in the Groq project (console.groq.com, project settings, models) so the gateway can fail over on rate limits. Today Groq answers "blocked at the project level" for it.
+Done 15 Nov: `openai/gpt-oss-20b` is enabled in the Groq project, and the gateway's failover to it on rate limits was tested (8 of 8 burst requests succeeded, 3 served by the fallback).
 
 When recording, wait about a minute between live checks: the Groq free tier allows about 8,000 tokens per minute and back-to-back checks can hit HTTP 429.
 

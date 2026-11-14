@@ -68,3 +68,10 @@ Each batch is accepted only after the diff was read and the gates were run by th
 - Rate limits: Groq free tier is about 8,000 tokens per minute on `gpt-oss-120b`; an HTTP 429 ended one claim and one ask-mode run. The app now retries 429 (up to 2 more times). The configured failover `groq/openai/gpt-oss-20b` cannot help yet: Groq answers that the model is blocked at the project level, so it must be enabled in the Groq project settings.
 - Not verified: the xAI path (no xAI key; ask mode uses `gpt-oss-120b` via `MODEL_ANSWER`) and failover to `gpt-oss-20b`.
 - Backend tests: 84 passed.
+
+## Fallback verification, 15 Nov (after the team enabled gpt-oss-20b in Groq)
+
+- Direct call through the gateway to `groq/openai/gpt-oss-20b` with the app's virtual key: HTTP 200 (it was 403 "blocked at the project level" before).
+- Burst of 8 concurrent requests (about 1,600 prompt tokens each) to `groq/openai/gpt-oss-120b` with `fallbacks: [groq/openai/gpt-oss-20b]`: Groq rate-limited 3, Bifrost served those 3 from `gpt-oss-20b` (`routing_info.is_fallback: true`), 8 of 8 succeeded. A second burst right after: 7 of 8 succeeded, 4 by fallback, 1 still 429 because both models were exhausted in the same minute (the app's own 429 retry is not part of that probe).
+- Real check through the UI right after a burst (three version claims): all three stale, the judge call served by `groq/openai/gpt-oss-20b` and recorded as a fallback, the usage strip showed "fallback → groq/openai/gpt-oss-20b", console clean.
+- Also on 15 Nov: the team chose Groq only; the gateway's stored config was reset so the removed xAI provider is gone; `make smoke` passed again on the Groq-only gateway.
