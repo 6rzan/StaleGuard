@@ -264,7 +264,7 @@ From the repo root:
 | Gate | Command | Covers |
 |---|---|---|
 | Backend lint | `cd backend && uv run ruff check .` | Python style and import order |
-| Backend tests | `cd backend && uv run pytest -q` | 70 tests (last run: 70 passed): score formula, claim spans, the Bifrost and Tavily clients against a mocked HTTP transport, the pipeline, cache, and the API. No network. |
+| Backend tests | `cd backend && uv run pytest -q` | 72 tests (last run: 72 passed): score formula, claim spans, the Bifrost and Tavily clients against a mocked HTTP transport, the pipeline, cache, and the API. No network. |
 | Frontend lint | `cd frontend && npm run lint` | oxlint with warnings denied |
 | Frontend build | `cd frontend && npm run build` | TypeScript check and Vite bundle |
 
