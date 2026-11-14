@@ -12,18 +12,6 @@
           "weight": 1.0
         }
       ]
-    },
-    "xai": {
-      "keys": [
-        {
-          "name": "xai-default",
-          "value": "env.XAI_API_KEY",
-          "models": [
-            "*"
-          ],
-          "weight": 1.0
-        }
-      ]
     }
   },
   "governance": {
@@ -39,15 +27,6 @@
             "allowed_models": [
               "openai/gpt-oss-120b",
               "openai/gpt-oss-20b"
-            ],
-            "key_ids": [
-              "*"
-            ]
-          },
-          {
-            "provider": "xai",
-            "allowed_models": [
-              "grok-4.7"
             ],
             "key_ids": [
               "*"

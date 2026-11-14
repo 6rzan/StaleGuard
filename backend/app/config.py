@@ -16,10 +16,8 @@ class Settings:
     bifrost_virtual_key: str = ""
     model_extract: str = "groq/openai/gpt-oss-120b"
     model_judge: str = "groq/openai/gpt-oss-120b"
-    model_answer: str = "xai/grok-4.7"
-    model_fallbacks: list[str] = field(
-        default_factory=lambda: ["groq/openai/gpt-oss-20b", "xai/grok-4.7"]
-    )
+    model_answer: str = "groq/openai/gpt-oss-120b"
+    model_fallbacks: list[str] = field(default_factory=lambda: ["groq/openai/gpt-oss-20b"])
     tavily_api_key: str = ""
     max_claims: int = 8
     cache_enabled: bool = True
