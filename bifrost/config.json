@@ -1,11 +1,14 @@
 {
+  "$schema": "https://www.getbifrost.ai/schema",
   "providers": {
     "groq": {
       "keys": [
         {
           "name": "groq-default",
           "value": "env.GROQ_API_KEY",
-          "models": ["*"],
+          "models": [
+            "*"
+          ],
           "weight": 1.0
         }
       ]
@@ -15,10 +18,58 @@
         {
           "name": "xai-default",
           "value": "env.XAI_API_KEY",
-          "models": ["*"],
+          "models": [
+            "*"
+          ],
           "weight": 1.0
         }
       ]
     }
+  },
+  "governance": {
+    "virtual_keys": [
+      {
+        "id": "vk-staleguard",
+        "name": "StaleGuard app",
+        "value": "env.BIFROST_VIRTUAL_KEY",
+        "is_active": true,
+        "provider_configs": [
+          {
+            "provider": "groq",
+            "allowed_models": [
+              "openai/gpt-oss-120b"
+            ],
+            "key_ids": [
+              "*"
+            ]
+          },
+          {
+            "provider": "xai",
+            "allowed_models": [
+              "grok-4.7"
+            ],
+            "key_ids": [
+              "*"
+            ]
+          }
+        ],
+        "rate_limit_id": "rl-staleguard"
+      }
+    ],
+    "budgets": [
+      {
+        "id": "budget-staleguard",
+        "virtual_key_id": "vk-staleguard",
+        "max_limit": 5.0,
+        "reset_duration": "1d"
+      }
+    ],
+    "rate_limits": [
+      {
+        "id": "rl-staleguard",
+        "request_max_limit": 60,
+        "request_reset_duration": "1m"
+      }
+    ]
   }
 }

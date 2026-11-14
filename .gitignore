@@ -25,3 +25,7 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# files Bifrost writes into its app dir (npx path)
+bifrost/*.db
+bifrost/*.db-*
