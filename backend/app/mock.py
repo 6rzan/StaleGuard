@@ -78,7 +78,8 @@ class MockLLM:
 
 class MockSearch:
     async def search(self, claim: Claim) -> SearchResult:
-        await asyncio.sleep(SEARCH_DELAY_S)
+        # Staggered by claim position so the UI shows claims finishing one by one.
+        await asyncio.sleep(SEARCH_DELAY_S * (1 + (int(claim.id[1:]) - 1) % 4))
         entry = match_fixture(claim.text)
         if entry is None:
             return SearchResult(evidence=[])

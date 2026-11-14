@@ -17,7 +17,10 @@ Return one JSON object: {"claims": [...]}. Each claim:
   "risk_reason": one short sentence on why it may be outdated,
   "search_query": a web search query that would confirm the current value
 }
-List claims in the order they appear. Do not paraphrase "text". Skip opinions and advice."""
+List claims in the order they appear. Do not paraphrase "text". Skip opinions and advice.
+Return at most 15 claims; when there are more, keep the ones most likely to be outdated.
+search_query must name the entity and ask for the current value
+(e.g. "Northwind Cloud Pro plan current price")."""
 
 JUDGE_SYSTEM = """You check whether a claim is still true today, using only the numbered sources.
 
@@ -33,10 +36,10 @@ Return one JSON object:
 Prefer newer sources when they disagree. Use "unverified" when the sources do not settle it."""
 
 
-def extract_messages(answer: str) -> list[dict]:
+def extract_messages(answer: str, today: str) -> list[dict]:
     return [
         {"role": "system", "content": EXTRACT_SYSTEM},
-        {"role": "user", "content": f"Answer:\n{answer}"},
+        {"role": "user", "content": f"Today: {today}\nAnswer:\n{answer}"},
     ]
 
 

@@ -97,3 +97,42 @@ async def test_failed_extraction_marks_check_error(settings):
     assert check.status == "error"
     assert "gateway down" in check.error
     assert store.get(settings.database_path, "t1").status == "error"
+
+
+async def test_scoring_failure_marks_only_that_claim(settings, monkeypatch):
+    from app import pipeline
+
+    real = pipeline.score_claim
+    calls = []
+
+    def flaky(*args):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("scoring broke")
+        return real(*args)
+
+    monkeypatch.setattr(pipeline, "score_claim", flaky)
+    new_check(settings, "The Pro plan costs $20 per month per user.")
+    check = await run_check("t1", settings, MockLLM(), MockSearch())
+    assert check.status == "done"
+    (c,) = check.claims
+    assert c.status == "error" and c.error == "scoring broke"
+    assert c.label == "unverified" and c.freshness_score == 35
+
+
+async def test_unexpected_failure_ends_check_in_error(settings, monkeypatch):
+    real = store.save
+    failed = []
+
+    def flaky(path, check):
+        if check.status == "verifying" and not failed:
+            failed.append(1)
+            raise RuntimeError("disk full")
+        real(path, check)
+
+    monkeypatch.setattr(store, "save", flaky)
+    new_check(settings, SAMPLES["pricing"]["answer"])
+    check = await run_check("t1", settings, MockLLM(), MockSearch())
+    assert check.status == "error"
+    assert check.error == "Check failed: disk full"
+    assert store.get(settings.database_path, "t1").status == "error"

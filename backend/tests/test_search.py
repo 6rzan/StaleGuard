@@ -71,3 +71,21 @@ async def test_http_errors_raise_clean_message(status):
         await tavily([], status=status).search(claim("pricing"))
     assert str(err.value) == f"Tavily search failed: HTTP {status}"
     assert "tvly-test" not in str(err.value)
+
+
+async def test_http_error_includes_server_detail():
+    payload = {"detail": {"error": "Unauthorized: missing or invalid API key."}}
+    with pytest.raises(RuntimeError) as err:
+        await tavily([], status=401, payload=payload).search(claim("pricing"))
+    assert str(err.value) == (
+        "Tavily search failed: HTTP 401: Unauthorized: missing or invalid API key."
+    )
+
+
+async def test_timeout_gives_clear_message():
+    def handler(request):
+        raise httpx.ReadTimeout("slow")
+
+    search = TavilySearch(Settings(), transport=httpx.MockTransport(handler))
+    with pytest.raises(RuntimeError, match="Tavily at https://api.tavily.com/search timed out"):
+        await search.search(claim("pricing"))

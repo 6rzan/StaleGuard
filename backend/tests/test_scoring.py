@@ -87,3 +87,13 @@ def test_overall_and_summary():
     s = summarize(claims)
     assert (s.fresh, s.review, s.stale, s.unverified, s.skipped) == (1, 0, 1, 1, 1)
     assert overall_score([claim(status="skipped")]) is None
+
+
+def test_naive_and_unparsable_dates():
+    naive = Evidence(title="t", url="https://example.com", snippet="s",
+                     published_date="2026-11-14T12:00:00", score=0.9, stance="supports")
+    junk = naive.model_copy(update={"published_date": "last week"})
+    _, b = score_claim("current", 1.0, "pricing", "high", [naive], NOW)
+    assert b.recency == 1.0
+    _, b = score_claim("current", 1.0, "pricing", "high", [junk], NOW)
+    assert b.recency == 0.5

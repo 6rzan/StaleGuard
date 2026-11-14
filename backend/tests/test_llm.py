@@ -108,3 +108,36 @@ async def test_http_error_raises_without_secret():
     with pytest.raises(RuntimeError) as err:
         await llm.extract_claims("x")
     assert "401" in str(err.value) and "sk-secret" not in str(err.value)
+
+
+async def test_json_wrapped_in_prose_is_parsed():
+    seen = []
+    llm = make_llm([completion(f"Here is the result: {json.dumps(CLAIMS)} Hope that helps.")], seen)
+    claims, _ = await llm.extract_claims("x")
+    assert len(claims) == 1
+
+
+async def test_extract_prompt_carries_today():
+    seen = []
+    await make_llm([completion(json.dumps(CLAIMS))], seen).extract_claims("x")
+    user = json.loads(seen[0].content)["messages"][1]["content"]
+    assert user.startswith("Today: 20")
+
+
+async def test_http_error_includes_server_message():
+    def handler(request):
+        return httpx.Response(401, json={"error": {"message": "invalid api key sk-secret"}})
+
+    llm = BifrostLLM(Settings(bifrost_api_key="sk-secret"), transport=httpx.MockTransport(handler))
+    with pytest.raises(RuntimeError) as err:
+        await llm.extract_claims("x")
+    assert str(err.value) == "Bifrost request failed: HTTP 401: invalid api key ***"
+
+
+async def test_unreachable_gateway_names_the_url():
+    def handler(request):
+        raise httpx.ConnectError("refused")
+
+    llm = BifrostLLM(Settings(), transport=httpx.MockTransport(handler))
+    with pytest.raises(RuntimeError, match=r"Cannot reach the Bifrost gateway at http://127\.0\.0\.1:8080"):
+        await llm.extract_claims("x")
