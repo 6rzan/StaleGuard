@@ -38,3 +38,12 @@ Each batch is accepted only after the diff was read and the gates were run by th
 - Gates: lint 0 warnings; strict build clean; no new dependency.
 - Browser at 1280 px and 375 px against the real mock backend: mode switch, ask flow with the generating state, corrected answer panel with word diff ($20 to $25), cached tags and cache-hit count, Download report button present, sponsor labels by mode, claim tags stay attached to their span; no horizontal scroll, no tap target under 40 px, console empty.
 - Not verified by the reviewer: the clipboard copy succeeding and the saved report file (browser pane blocks both); the report text was checked by the implementer.
+
+## B6: ship material (T028–T031), accepted 14 Nov 22:25
+
+- README (one rework round, 7 accuracy findings fixed): every env variable matches `.env.example`; the UI descriptions were corrected against the components; the AI-tools section states who planned, who wrote and who chose the problem; "Run it with real keys" reordered; raw commands given next to the make targets. The mock commands, the API example and the gates in it were run by the implementer; the gates were rerun by the reviewer (72 tests).
+- Media: GIF (960x600, 12.8 s, 2.3 MB) and five stills checked frame by frame on a contact sheet; all are mock-mode runs on a fresh database. `scripts/record-demo.mjs` regenerates them.
+- Pitch deck (one rework round): 9 slides with speaker notes; the committed PDF is PowerPoint's own export of the pptx and every page was viewed; screenshots captioned as mock data; slide 8 says the live path has not been run; slide 9 carries the AI-tools disclosure.
+- Follow-up fix found while writing the README: the mock rewrite replaced a whole sentence; it now changes only the outdated value (2 new tests).
+- Launch audit: PASS 1 at the start, PASS 10 before the release tag. Still open and listed in `docs/OWNER_TODO.md`: GitHub description, topics, Discussions, social preview upload (owner only), demo video link (team).
+- Not verified anywhere: a real Bifrost or Tavily call, the Bifrost container (`--profile live`), Docker on the build machine (WSL is not installed there; CI covers the app image).

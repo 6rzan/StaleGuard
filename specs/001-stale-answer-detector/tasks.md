@@ -58,10 +58,10 @@ Inputs: [spec.md](spec.md), [plan.md](plan.md), [contracts/api.md](contracts/api
 
 ## Phase 6 — Ship
 
-- [ ] T028 [Esam] Full README: architecture diagram, install (mock, then real keys), Configuration table, how Bifrost and Tavily are used, how AI is used, AI tools used to build this, Team
-- [ ] T029 [Esam] `docs/OWNER_TODO.md`, `docs/launch/show-hn.md` (draft only), social preview PNG, demo GIF
-- [ ] T030 [Esam] Pitch deck (pptx + PDF) and demo video script in `docs/pitch/`
-- [ ] T031 [Esam] Good-first issues, `v0.1.0` tag after CI is green
+- [x] T028 [Esam] Full README: architecture diagram, install (mock, then real keys), Configuration table, how Bifrost and Tavily are used, how AI is used, AI tools used to build this, Team
+- [x] T029 [Esam] `docs/OWNER_TODO.md`, `docs/launch/show-hn.md` (draft only), social preview PNG, demo GIF
+- [x] T030 [Esam] Pitch deck (pptx + PDF) and demo video script in `docs/pitch/`
+- [x] T031 [Esam] Good-first issues, `v0.1.0` tag after CI is green
 
 ## Coverage (PS06 → tasks)
 
