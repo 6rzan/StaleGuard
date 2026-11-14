@@ -20,7 +20,7 @@ def test_health(client):
 def test_samples(client):
     samples = client.get("/api/samples").json()
     assert [s["id"] for s in samples] == ["pricing", "api-versions", "leadership-regulation"]
-    assert all(s["question"] is None and s["answer"] for s in samples)
+    assert all(s["question"] and s["answer"] for s in samples)
 
 
 def test_check_with_wait_returns_finished_check(client):
@@ -31,7 +31,7 @@ def test_check_with_wait_returns_finished_check(client):
     assert check["status"] == "done"
     assert check["mode"] == "mock"
     assert check["answer"] == answer
-    assert check["corrected_answer"] is None
+    assert "$25" in check["corrected_answer"] and check["corrected_answer"] != answer
     for c in check["claims"]:
         assert answer[c["start"]:c["end"]] == c["text"]
         assert c["cached"] is False
@@ -64,14 +64,38 @@ def test_unknown_check_is_404(client):
 
 @pytest.mark.parametrize(
     "body",
-    [None, {}, {"answer": ""}, {"answer": "x" * 8001}, {"question": "Who leads Kestrel Labs?"},
-     {"answer": "a", "question": "b"}],
+    [None, {}, {"answer": ""}, {"answer": "x" * 8001}, {"question": ""},
+     {"answer": None, "question": None}],
 )
 def test_invalid_requests_are_422(client, body):
     r = client.post("/api/checks", json=body)
     assert r.status_code == 422
 
 
-def test_question_only_message_is_clear(client):
-    r = client.post("/api/checks", json={"question": "Who leads Kestrel Labs?"})
-    assert "Ask mode" in str(r.json()["detail"])
+def test_ask_mode_generates_then_checks(client):
+    r = client.post("/api/checks?wait=true", json={"question": "Who runs Kestrel Labs?"})
+    assert r.status_code == 200
+    check = r.json()
+    assert check["status"] == "done"
+    assert check["question"] == "Who runs Kestrel Labs?"
+    assert check["answer"].startswith("Kestrel Labs is led by CEO Maria Okafor")
+    assert check["model_calls"][0]["stage"] == "answer"
+    assert "Daniel Reyes" in check["corrected_answer"]
+
+
+def test_ask_mode_without_wait_starts_generating(client, settings):
+    from app import store
+
+    r = client.post("/api/checks", json={"question": "How much is Northwind Cloud?"})
+    assert r.status_code == 202
+    check = store.get(settings.database_path, r.json()["id"])
+    assert check.status == "done" and check.answer
+
+
+def test_answer_wins_when_both_given(client):
+    r = client.post("/api/checks?wait=true",
+                    json={"answer": "Paris is the capital of France.", "question": "Capital?"})
+    check = r.json()
+    assert check["answer"] == "Paris is the capital of France."
+    assert check["question"] == "Capital?"
+    assert all(c["stage"] != "answer" for c in check["model_calls"])
