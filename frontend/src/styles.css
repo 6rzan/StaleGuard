@@ -266,12 +266,18 @@ a {
   color: var(--muted);
   cursor: not-allowed;
 }
+.btn-small {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.92rem;
+}
 .btn-secondary {
   background: var(--card);
   border-color: var(--accent);
   color: var(--accent);
 }
-.btn-secondary:hover {
+.btn-secondary:hover,
+.btn-secondary[aria-pressed="true"] {
   background: var(--accent-tint);
 }
 
@@ -313,8 +319,48 @@ textarea {
   line-height: 1.55;
   resize: vertical;
 }
-textarea::placeholder {
+textarea::placeholder,
+input[type="text"]::placeholder {
   color: var(--muted);
+}
+
+input[type="text"] {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.hint {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.segmented {
+  display: inline-flex;
+  margin-bottom: 16px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--paper-2);
+}
+.segment {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+.segment[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--line-strong);
 }
 
 .input-foot {
@@ -421,6 +467,17 @@ textarea::placeholder {
   color: var(--review-ink);
 }
 
+.summary[data-plain="true"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.nothing {
+  margin-top: 8px;
+  font-weight: 600;
+}
+.download {
+  margin-top: 14px;
+}
+
 .status-line {
   margin-top: 4px;
   color: var(--ink-2);
@@ -458,6 +515,29 @@ textarea::placeholder {
 }
 
 /* Answer with highlighted claims */
+
+.question {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-style: italic;
+}
+.question span {
+  display: block;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
 
 .answer-head {
   display: flex;
@@ -524,16 +604,65 @@ textarea::placeholder {
 }
 .dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 0.9em;
+  height: 0.9em;
   border-radius: 50%;
   background: var(--tone);
+  transform: scale(0.6);
 }
 
 @keyframes pulse {
   50% {
     background-color: var(--paper-2);
   }
+}
+
+/* Corrected answer */
+
+.corrected {
+  border-left: 5px solid var(--fresh);
+}
+.corrected-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.corrected-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.copy-note {
+  min-height: 1.5em;
+  margin: 4px 0 6px;
+  color: var(--fresh-ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.copy-note[data-failed="true"] {
+  color: var(--stale-ink);
+}
+del,
+ins {
+  border-radius: 2px;
+  text-decoration-thickness: 2px;
+}
+del {
+  background: var(--stale-tint);
+  color: var(--stale-ink);
+  text-decoration: line-through;
+}
+ins {
+  background: var(--fresh-tint);
+  color: var(--fresh-ink);
+  text-decoration: underline;
+}
+.diff-key {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 /* Claim cards */
@@ -637,11 +766,54 @@ textarea::placeholder {
   color: var(--ink-2);
   font-size: 0.78rem;
 }
+.tag[title] {
+  cursor: help;
+}
 .tag-state {
   border-color: transparent;
   background: var(--tone-tint);
   color: var(--tone-ink);
   font-weight: 700;
+}
+
+/* Content that arrives later opens smoothly instead of pushing the page. */
+.reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: expand 0.35s ease-out;
+}
+.reveal > div {
+  min-height: 0;
+  overflow: hidden;
+  padding: 6px;
+  margin: -6px;
+}
+@keyframes expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+.skeleton {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.skeleton span {
+  display: block;
+  height: 14px;
+  border-radius: 6px;
+  background: var(--paper-2);
+  animation: fade 1.3s ease-in-out infinite;
+}
+.skeleton span:first-child {
+  height: 22px;
+}
+.skeleton span:last-child {
+  width: 70%;
 }
 
 .claim-error {
@@ -848,6 +1020,16 @@ textarea::placeholder {
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius);
   font-size: 0.88rem;
+}
+.model-block {
+  display: grid;
+  gap: 6px;
+}
+.usage-title {
+  color: var(--muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 .model-list {
   display: flex;
