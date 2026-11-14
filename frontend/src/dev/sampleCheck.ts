@@ -1,0 +1,168 @@
+import type { Check, Claim } from "../types";
+
+// Hand-written finished check, shown only with ?demo=1. Fictional company, example.com URLs.
+const answer =
+  "The Pro plan costs $20 per month. Northwind Cloud's SDK is at version 3.2 and its CEO is Dana Ruiz. " +
+  "The service runs in 12 regions. Paris is the capital of France.";
+
+function claim(n: number, text: string, rest: Partial<Claim>): Claim {
+  const start = answer.indexOf(text);
+  return {
+    id: `c${n}`,
+    text,
+    start,
+    end: start + text.length,
+    category: "other",
+    time_sensitive: true,
+    volatility: "medium",
+    risk_reason: "",
+    search_query: text,
+    status: "done",
+    verdict: null,
+    freshness_score: null,
+    label: null,
+    current_value: null,
+    explanation: null,
+    confidence: null,
+    score_breakdown: null,
+    evidence: [],
+    cached: false,
+    error: null,
+    ...rest,
+  };
+}
+
+export const sampleCheck: Check = {
+  id: "demo",
+  created_at: "2026-11-14T09:30:00Z",
+  status: "done",
+  mode: "mock",
+  question: null,
+  answer,
+  corrected_answer: null,
+  overall_score: 52,
+  summary: { fresh: 1, review: 1, stale: 1, unverified: 1, skipped: 1 },
+  claims: [
+    claim(1, "The Pro plan costs $20 per month", {
+      category: "pricing",
+      volatility: "high",
+      risk_reason: "Subscription prices change often.",
+      search_query: "Northwind Cloud Pro plan price per month",
+      verdict: "outdated",
+      freshness_score: 9,
+      label: "stale",
+      current_value: "$25 per month since September 2026",
+      explanation: "Two recent sources list the Pro plan at $25 per month.",
+      confidence: 0.9,
+      score_breakdown: { verdict: "outdated", confidence: 0.9, recency: 0.66, agreement: 1, quality: 0.75 },
+      evidence: [
+        {
+          title: "Northwind Cloud pricing",
+          url: "https://example.com/northwind/pricing",
+          snippet: "Pro: $25/month, billed monthly.",
+          published_date: "2026-10-02T00:00:00Z",
+          score: 0.93,
+          stance: "contradicts",
+        },
+      ],
+    }),
+    claim(2, "SDK is at version 3.2", {
+      category: "version",
+      risk_reason: "Releases ship every few weeks.",
+      verdict: "current",
+      freshness_score: 78,
+      label: "fresh",
+      explanation: "The release notes list 3.2 as the latest stable version.",
+      confidence: 0.8,
+      score_breakdown: { verdict: "current", confidence: 0.8, recency: 0.3, agreement: 0.6, quality: 0.36 },
+      evidence: [
+        {
+          title: "Northwind SDK release notes",
+          url: "https://example.com/northwind/sdk/releases",
+          snippet: "3.2 is the latest stable release.",
+          published_date: null,
+          score: 0.71,
+          stance: "supports",
+        },
+      ],
+    }),
+    claim(3, "its CEO is Dana Ruiz", {
+      category: "leadership",
+      risk_reason: "Executives change roles.",
+      verdict: "current",
+      freshness_score: 71,
+      label: "review",
+      explanation: "One older article names Dana Ruiz; nothing newer confirms it.",
+      confidence: 0.6,
+      score_breakdown: { verdict: "current", confidence: 0.6, recency: 0.2, agreement: 0.4, quality: 0.18 },
+      evidence: [
+        {
+          title: "Northwind leadership team",
+          url: "https://www.example.com/northwind/about",
+          snippet: "Dana Ruiz, Chief Executive Officer.",
+          published_date: "2025-03-11T00:00:00Z",
+          score: 0.55,
+          stance: "supports",
+        },
+        {
+          title: "Northwind announces new hires",
+          url: "https://example.com/news/northwind-hires",
+          snippet: "The company announced several appointments.",
+          published_date: "2026-08-20T00:00:00Z",
+          score: 0.4,
+          stance: "neutral",
+        },
+      ],
+    }),
+    claim(4, "The service runs in 12 regions", {
+      category: "statistic",
+      volatility: "low",
+      risk_reason: "Regions are added over time.",
+      verdict: "unverified",
+      freshness_score: 50,
+      label: "unverified",
+      explanation: "No source stated the number of regions.",
+      confidence: 0,
+      score_breakdown: { verdict: "unverified", confidence: 0, recency: 0.5, agreement: 0.5, quality: 0 },
+    }),
+    claim(5, "Paris is the capital of France", { time_sensitive: false, status: "skipped" }),
+  ],
+  model_calls: [
+    {
+      stage: "extract",
+      requested: "openai/gpt-4o-mini",
+      served_by: "openai/gpt-4o-mini",
+      is_fallback: false,
+      prompt_tokens: 410,
+      completion_tokens: 160,
+      latency_ms: 620,
+    },
+    {
+      stage: "judge",
+      requested: "openai/gpt-4o",
+      served_by: "openai/gpt-4o",
+      is_fallback: false,
+      prompt_tokens: 900,
+      completion_tokens: 140,
+      latency_ms: 1100,
+    },
+    {
+      stage: "judge",
+      requested: "openai/gpt-4o",
+      served_by: "anthropic/claude-sonnet",
+      is_fallback: true,
+      prompt_tokens: 820,
+      completion_tokens: 120,
+      latency_ms: 1400,
+    },
+  ],
+  usage: {
+    llm_calls: 3,
+    prompt_tokens: 2130,
+    completion_tokens: 420,
+    search_calls: 3,
+    cache_hits: 0,
+    duration_ms: 2400,
+  },
+  error: null,
+};
