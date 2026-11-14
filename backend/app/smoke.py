@@ -31,7 +31,7 @@ async def run(settings: Settings) -> bool:
     except Exception as exc:
         print(
             f"FAIL bifrost  {short_error(exc)}. Check: is the gateway running at "
-            f"{settings.bifrost_base_url}? Is a provider key added in Bifrost? "
+            f"{settings.bifrost_base_url}? Are GROQ_API_KEY and XAI_API_KEY set for Bifrost? "
             f"Is '{settings.model_extract}' a valid provider/model name?"
         )
 

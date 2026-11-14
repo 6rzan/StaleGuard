@@ -14,7 +14,7 @@ CLAIMS = {"claims": [{"text": "The Pro plan costs $20.", "category": "pricing",
 
 
 def completion(content: str, **extra) -> dict:
-    return {"model": "gpt-4o-mini", "choices": [{"message": {"content": content}}],
+    return {"model": "openai/gpt-oss-120b", "choices": [{"message": {"content": content}}],
             "usage": {"prompt_tokens": 11, "completion_tokens": 7}, **extra}
 
 
@@ -29,20 +29,20 @@ def make_llm(responses: list[dict], seen: list[httpx.Request], **settings) -> Bi
 async def test_request_carries_model_fallbacks_and_virtual_key():
     seen = []
     llm = make_llm([completion(json.dumps(CLAIMS))], seen,
-                   model_fallbacks=["anthropic/claude-3-5-haiku"], bifrost_virtual_key="vk-test")
+                   model_fallbacks=["xai/grok-4.7"], bifrost_virtual_key="vk-test")
     claims, call = await llm.extract_claims("The Pro plan costs $20.")
 
     body = json.loads(seen[0].content)
     assert seen[0].url.path == "/v1/chat/completions"
-    assert body["model"] == "openai/gpt-4o-mini"
-    assert body["fallbacks"] == ["anthropic/claude-3-5-haiku"]
+    assert body["model"] == "groq/openai/gpt-oss-120b"
+    assert body["fallbacks"] == ["xai/grok-4.7"]
     assert body["temperature"] == 0
     assert body["response_format"] == {"type": "json_object"}
     assert seen[0].headers["x-bf-vk"] == "vk-test"
     assert "authorization" not in seen[0].headers
     assert [c.text for c in claims] == ["The Pro plan costs $20."]  # malformed item dropped
     assert (call.stage, call.prompt_tokens, call.completion_tokens) == ("extract", 11, 7)
-    assert call.served_by == "openai/gpt-4o-mini" and call.is_fallback is False
+    assert call.served_by == "groq/openai/gpt-oss-120b" and call.is_fallback is False
 
 
 async def test_no_fallbacks_or_virtual_key_when_unset():
@@ -56,12 +56,38 @@ async def test_no_fallbacks_or_virtual_key_when_unset():
 
 async def test_served_by_and_fallback_from_routing_info():
     routing = {"extra_fields": {"routing_info": {
-        "provider": "anthropic", "model": "claude-3-5-haiku", "is_fallback": True}}}
+        "provider": "xai", "model": "grok-4.7", "is_fallback": True}}}
     seen = []
     llm = make_llm([completion(json.dumps(CLAIMS), **routing)], seen)
     _, call = await llm.extract_claims("x")
-    assert call.served_by == "anthropic/claude-3-5-haiku"
+    assert call.served_by == "xai/grok-4.7"
     assert call.is_fallback is True
+
+
+async def test_slashed_model_id_is_not_a_fallback():
+    routing = {"extra_fields": {"routing_info": {
+        "provider": "groq", "model": "openai/gpt-oss-120b"}}}
+    seen = []
+    llm = make_llm([completion(json.dumps(CLAIMS), **routing)], seen)
+    _, call = await llm.extract_claims("x")
+    assert call.served_by == "groq/openai/gpt-oss-120b" and call.is_fallback is False
+
+
+async def test_response_model_field_alone_is_not_a_fallback():
+    seen = []
+    llm = make_llm([completion(json.dumps(CLAIMS))], seen)  # model: openai/gpt-oss-120b
+    _, call = await llm.extract_claims("x")
+    assert call.served_by == "groq/openai/gpt-oss-120b" and call.is_fallback is False
+
+
+async def test_fallback_equal_to_requested_model_is_dropped():
+    seen = []
+    llm = make_llm([{"choices": [{"message": {"content": "A."}}]}] * 2, seen,
+                   model_fallbacks=["xai/grok-4.7"])
+    await llm.answer("q")  # requests xai/grok-4.7
+    assert "fallbacks" not in json.loads(seen[0].content)
+    await llm.rewrite("a", [])  # requests the Groq judge model
+    assert json.loads(seen[1].content)["fallbacks"] == ["xai/grok-4.7"]
 
 
 async def test_fenced_json_is_tolerated():
@@ -97,7 +123,7 @@ async def test_judge_parses_verdict_and_pads_stances():
     assert judgement.verdict == "outdated"
     assert judgement.confidence == 1.0
     assert judgement.stances == ["contradicts", "neutral", "neutral"]
-    assert call.stage == "judge" and call.requested == "openai/gpt-4o"
+    assert call.stage == "judge" and call.requested == "groq/openai/gpt-oss-120b"
 
 
 async def test_http_error_raises_without_secret():
