@@ -85,6 +85,20 @@ async def test_no_rewrite_when_nothing_is_outdated(settings):
     assert all(m.stage != "rewrite" for m in c.model_calls)
 
 
+async def test_rewrite_of_partial_sentence_changes_only_the_value(settings):
+    c = await check(settings, "The Pro plan costs $20 per month per user.")
+    assert c.claims[0].label == "stale"
+    assert c.corrected_answer == "The Pro plan costs $25 per month per user."
+
+
+async def test_rewrite_fixes_every_outdated_claim_in_place(settings):
+    c = await check(settings, ANSWERS["leadership-regulation"])
+    assert c.corrected_answer == ANSWERS["leadership-regulation"].replace(
+        "Maria Okafor, who took over from the company's founder in 2021",
+        "Daniel Reyes, who succeeded Maria Okafor in August 2026",
+    )
+
+
 class FailingRewriteLLM(MockLLM):
     async def rewrite(self, answer, outdated):
         raise RuntimeError("rewrite broke")

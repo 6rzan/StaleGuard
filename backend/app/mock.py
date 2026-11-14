@@ -70,10 +70,16 @@ class MockLLM:
         return best["answer"], mock_call("answer")
 
     async def rewrite(self, answer: str, outdated: list[Claim]) -> tuple[str, ModelCall]:
-        for claim in outdated:
+        # Only the outdated value inside each claim's own span changes. Right to left, so
+        # earlier offsets stay valid when a replacement changes the length.
+        for claim in sorted(outdated, key=lambda c: c.start, reverse=True):
             entry = match_fixture(claim.text)
-            if entry and entry.get("corrected_text"):
-                answer = answer.replace(claim.text, entry["corrected_text"], 1)
+            if not entry or "replace" not in entry:
+                continue
+            old, new = entry["replace"]
+            if old in claim.text:
+                fixed = claim.text.replace(old, new, 1)
+                answer = answer[: claim.start] + fixed + answer[claim.end :]
         return answer, mock_call("rewrite")
 
     async def extract_claims(self, answer: str) -> tuple[list[RawClaim], ModelCall]:
