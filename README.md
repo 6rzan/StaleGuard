@@ -75,8 +75,8 @@ flowchart LR
     API --> DB
     EX -->|chat completions| BF["Bifrost gateway"]
     JU -->|chat completions| BF
-    BF --> P1["OpenAI"]
-    BF -.->|failover| P2["Anthropic"]
+    BF --> P1["Groq: gpt-oss-120b"]
+    BF -.->|failover| P2["xAI: Grok"]
     SE -->|REST| TV["Tavily"]
 ```
 
@@ -128,15 +128,16 @@ The recency number depends on the date of the run because the mock sources are d
 
 ## How Bifrost is used
 
-[Bifrost](https://docs.getbifrost.ai) is the gateway between the app and the model providers. The app never talks to OpenAI or Anthropic directly and never holds a provider key. The client is `backend/app/llm.py`.
+[Bifrost](https://docs.getbifrost.ai) is the gateway between the app and the model providers. The app never talks to Groq or xAI directly and never holds a provider key. The client is `backend/app/llm.py`.
 
-- Endpoint: `POST {BIFROST_BASE_URL}/v1/chat/completions`, the OpenAI-compatible route. Models are named `provider/model`, for example `openai/gpt-4o-mini`.
+- Endpoint: `POST {BIFROST_BASE_URL}/v1/chat/completions`, the chat completions route. Models are named `provider/model`, for example `groq/openai/gpt-oss-120b` (provider `groq`, model id `openai/gpt-oss-120b`).
 - Request body: `model`, `messages`, `temperature: 0`, `response_format: {"type": "json_object"}` for extract and judge, and `fallbacks` set from `MODEL_FALLBACKS` when it is not empty.
-- Per-stage routing: `MODEL_EXTRACT` (cheap, structured output), `MODEL_JUDGE` (stronger, reasons over sources, also used for the rewrite) and `MODEL_ANSWER` (ask mode). Changing a model is an env change, not a code change.
+- Per-stage routing: `MODEL_EXTRACT` (structured output), `MODEL_JUDGE` (reasons over sources, also used for the rewrite) and `MODEL_ANSWER` (ask mode). Changing a model is an env change, not a code change.
+- Why this split: the high-volume structured stages (extract, judge, rewrite) run on an open-weight model on Groq, which is fast and cheap per call. The answer in ask mode comes from a different vendor, xAI Grok, so StaleGuard checks a model it did not use to judge, and Grok is also the failover if Groq fails. Moving a stage to another provider is an env change only; the gateway and the app code stay the same.
 - Headers: `Authorization: Bearer` when `BIFROST_API_KEY` is set, and `x-bf-vk` when `BIFROST_VIRTUAL_KEY` is set, so the gateway can apply budgets and rate limits per app.
 - What the app reads back: `choices[0].message.content`, `usage.prompt_tokens` and `completion_tokens`, and which provider and model served the call from `extra_fields.routing_info` (falling back to the `model` field).
 - Where it shows: the "Models via Bifrost gateway" strip under each result lists one entry per stage with the model requested (the judge entry shows a count, one call per claim). When a fallback answered, the entry gets a "fallback" tag with the model that served it. The strip also shows totals for tokens, searches, cache hits (when there are any) and duration. Per-call latency and token counts are in the API response (`model_calls`), not in the strip. `GET /api/health` reports the configured models.
-- The provider keys live only in the Bifrost container, loaded from `bifrost/config.json` (`env.OPENAI_API_KEY`, `env.ANTHROPIC_API_KEY`). Every request also shows up in the Bifrost dashboard on port 8080.
+- The provider keys live only in the Bifrost container, loaded from `bifrost/config.json` (`env.GROQ_API_KEY`, `env.XAI_API_KEY`). Every request also shows up in the Bifrost dashboard on port 8080.
 
 ## How Tavily is used
 
@@ -158,7 +159,7 @@ Live mode sends the answer text to Bifrost and your providers, and the claims to
    cp .env.example .env
    ```
 
-   Set `MOCK_MODE=false` and `TAVILY_API_KEY=...`. If you will use the Compose Bifrost service, also set `OPENAI_API_KEY` (and optionally `ANTHROPIC_API_KEY`); `bifrost/config.json` reads them. Check that `MODEL_EXTRACT`, `MODEL_JUDGE` and `MODEL_ANSWER` name models your provider keys can use.
+   Set `MOCK_MODE=false` and `TAVILY_API_KEY=...`. If you will use the Compose Bifrost service, also set `GROQ_API_KEY` and `XAI_API_KEY`; `bifrost/config.json` reads them. Check that `MODEL_EXTRACT`, `MODEL_JUDGE` and `MODEL_ANSWER` name models your provider keys can use.
 2. Start Bifrost, either with the Compose service:
 
    ```bash
@@ -200,15 +201,15 @@ All variables are in `.env.example`. The app reads them in `backend/app/config.p
 | `BIFROST_BASE_URL` | Base URL of the Bifrost gateway. | [Bifrost docs](https://docs.getbifrost.ai) | When `MOCK_MODE=false` | `http://127.0.0.1:8080` |
 | `BIFROST_API_KEY` | Bearer key if the gateway has auth turned on. | Your Bifrost setup | No | empty |
 | `BIFROST_VIRTUAL_KEY` | Bifrost virtual key sent as `x-bf-vk`, for budgets and rate limits. | Your Bifrost setup | No | empty |
-| `MODEL_EXTRACT` | Model for claim extraction. | Any model your Bifrost providers serve | Yes | `openai/gpt-4o-mini` |
-| `MODEL_JUDGE` | Model for judging evidence and rewriting. | Same | Yes | `openai/gpt-4o` |
-| `MODEL_ANSWER` | Model for the ask-mode answer. | Same | Yes | `openai/gpt-4o-mini` |
-| `MODEL_FALLBACKS` | Comma-separated models Bifrost tries on failure. | Same | No | empty in the app; `anthropic/claude-3-5-haiku-latest` in `.env.example` |
+| `MODEL_EXTRACT` | Model for claim extraction. | Any model your Bifrost providers serve | Yes | `groq/openai/gpt-oss-120b` |
+| `MODEL_JUDGE` | Model for judging evidence and rewriting. | Same | Yes | `groq/openai/gpt-oss-120b` |
+| `MODEL_ANSWER` | Model for the ask-mode answer. | Same | Yes | `xai/grok-4.7` |
+| `MODEL_FALLBACKS` | Comma-separated models Bifrost tries on failure. | Same | No | empty in the app; `xai/grok-4.7` in `.env.example` |
 | `TAVILY_API_KEY` | Tavily search key. | [app.tavily.com](https://app.tavily.com) | When `MOCK_MODE=false` | empty |
 | `MAX_CLAIMS` | Most flagged claims verified per check. | n/a | No | `8` |
 | `DATABASE_PATH` | SQLite file. | n/a | No | `backend/data/staleguard.db` |
-| `OPENAI_API_KEY` | OpenAI key, read by Bifrost, not by the app. | [platform.openai.com](https://platform.openai.com/api-keys) | For the OpenAI models | empty |
-| `ANTHROPIC_API_KEY` | Anthropic key, read by Bifrost, not by the app. | [console.anthropic.com](https://console.anthropic.com/settings/keys) | For the fallback model | empty |
+| `GROQ_API_KEY` | Groq key, read by Bifrost, not by the app. | [console.groq.com](https://console.groq.com/keys) | For the Groq models | empty |
+| `XAI_API_KEY` | xAI key, read by Bifrost, not by the app. | [console.x.ai](https://console.x.ai) | For the Grok models | empty |
 | `CACHE_ENABLED` | Reuse verified claims for a while. | n/a | No | `true` |
 
 `DATABASE_PATH` in `.env.example` is `data/staleguard.db`. A relative path is resolved against the `backend/` folder (`backend/app/config.py` does this), wherever the process starts.

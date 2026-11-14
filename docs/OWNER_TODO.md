@@ -39,8 +39,8 @@ Put them in `.env` on the machine that records the demo (copy from `.env.example
 | Key | Where to get it |
 |---|---|
 | `TAVILY_API_KEY` | https://app.tavily.com |
-| `OPENAI_API_KEY` | https://platform.openai.com/api-keys |
-| `ANTHROPIC_API_KEY` | https://console.anthropic.com/settings/keys (used by the fallback model) |
+| `GROQ_API_KEY` | https://console.groq.com/keys (extract, judge, rewrite) |
+| `XAI_API_KEY` | https://console.x.ai (ask-mode answer and fallback) |
 
 Also set `MOCK_MODE=false`. `BIFROST_API_KEY` and `BIFROST_VIRTUAL_KEY` are optional.
 
