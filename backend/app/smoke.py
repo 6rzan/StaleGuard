@@ -29,11 +29,17 @@ async def run(settings: Settings) -> bool:
         print(f"PASS bifrost  served_by={call.served_by} latency={call.latency_ms}ms")
         bifrost_ok = True
     except Exception as exc:
-        print(
-            f"FAIL bifrost  {short_error(exc)}. Check: is the gateway running at "
-            f"{settings.bifrost_base_url}? Are GROQ_API_KEY and XAI_API_KEY set for Bifrost? "
-            f"Is '{settings.model_extract}' a valid provider/model name?"
-        )
+        message = short_error(exc)
+        if "401" in message and "virtual key" in message.lower():
+            hint = ("Set BIFROST_VIRTUAL_KEY (starting with sk-bf-) in .env and restart the "
+                    "gateway.")
+        else:
+            hint = (
+                f"Check: is the gateway running at {settings.bifrost_base_url}? "
+                f"Are GROQ_API_KEY and XAI_API_KEY set for Bifrost? "
+                f"Is '{settings.model_extract}' a valid provider/model name?"
+            )
+        print(f"FAIL bifrost  {message}. {hint}")
 
     tavily_ok = False
     if not settings.tavily_api_key:

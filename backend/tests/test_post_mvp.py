@@ -4,8 +4,11 @@ import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime, timedelta
 
+import httpx
+
 from app import smoke, store
 from app.config import Settings
+from app.llm import BifrostLLM
 from app.mock import SAMPLES, MockLLM, MockSearch
 from app.models import Check, to_iso
 from app.pipeline import run_check, truncate
@@ -182,3 +185,17 @@ def test_smoke_fails_cleanly_when_gateway_is_unreachable(monkeypatch, capsys):
     assert "FAIL bifrost  Cannot reach the Bifrost gateway at http://127.0.0.1:9" in out
     assert "FAIL tavily  TAVILY_API_KEY is not set" in out
     assert "sk-hidden" not in out
+
+
+def test_smoke_hints_at_virtual_key_on_401(monkeypatch, capsys):
+    def reject(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"error": {
+            "message": "virtual key is required. Provide a virtual key via the x-bf-vk header."}})
+
+    monkeypatch.setattr(smoke, "BifrostLLM",
+                        lambda s: BifrostLLM(s, transport=httpx.MockTransport(reject)))
+    monkeypatch.setattr(smoke, "load_settings", lambda: Settings(mock_mode=True))
+    assert smoke.main() == 1
+    out = capsys.readouterr().out
+    assert "FAIL bifrost  Bifrost request failed: HTTP 401" in out
+    assert "Set BIFROST_VIRTUAL_KEY (starting with sk-bf-) in .env" in out
