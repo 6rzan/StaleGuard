@@ -137,6 +137,7 @@ The recency number depends on the date of the run because the mock sources are d
 - Headers: `Authorization: Bearer` when `BIFROST_API_KEY` is set, and `x-bf-vk` when `BIFROST_VIRTUAL_KEY` is set, so the gateway can apply budgets and rate limits per app.
 - What the app reads back: `choices[0].message.content`, `usage.prompt_tokens` and `completion_tokens`, and which provider and model served the call from `extra_fields.routing_info` (falling back to the `model` field).
 - Where it shows: the "Models via Bifrost gateway" strip under each result lists one entry per stage with the model requested (the judge entry shows a count, one call per claim). When a fallback answered, the entry gets a "fallback" tag with the model that served it. The strip also shows totals for tokens, searches, cache hits (when there are any) and duration. Per-call latency and token counts are in the API response (`model_calls`), not in the strip. `GET /api/health` reports the configured models.
+- Virtual key: the app has its own Bifrost virtual key (`vk-staleguard` in `bifrost/config.json`, value from `BIFROST_VIRTUAL_KEY`, sent as `x-bf-vk`). The gateway enforces a budget of 5 USD per day and 60 requests per minute on it, and only lets it use the two configured models.
 - The provider keys live only in the Bifrost container, loaded from `bifrost/config.json` (`env.GROQ_API_KEY`, `env.XAI_API_KEY`). Every request also shows up in the Bifrost dashboard on port 8080.
 
 ## How Tavily is used
@@ -159,20 +160,20 @@ Live mode sends the answer text to Bifrost and your providers, and the claims to
    cp .env.example .env
    ```
 
-   Set `MOCK_MODE=false` and `TAVILY_API_KEY=...`. If you will use the Compose Bifrost service, also set `GROQ_API_KEY` and `XAI_API_KEY`; `bifrost/config.json` reads them. Check that `MODEL_EXTRACT`, `MODEL_JUDGE` and `MODEL_ANSWER` name models your provider keys can use.
+   Set `MOCK_MODE=false` and `TAVILY_API_KEY=...`. Also set `GROQ_API_KEY`, `XAI_API_KEY` and `BIFROST_VIRTUAL_KEY` (make one with `echo sk-bf-$(openssl rand -hex 24)`); `bifrost/config.json` reads them, and the app sends the virtual key to the gateway. Check that `MODEL_EXTRACT`, `MODEL_JUDGE` and `MODEL_ANSWER` name models your provider keys can use.
 2. Start Bifrost, either with the Compose service:
 
    ```bash
    docker compose --profile live up bifrost
    ```
 
-   or directly with Node:
+   or directly with Node. Export `GROQ_API_KEY`, `XAI_API_KEY` and `BIFROST_VIRTUAL_KEY` in that shell first, and point Bifrost at this repo's config:
 
    ```bash
-   npx -y @maximhq/bifrost
+   npx -y @maximhq/bifrost -app-dir ./bifrost
    ```
 
-   Bifrost listens on http://127.0.0.1:8080 and has a web UI there. With the `npx` path, open that page and add the provider and its key in the web UI.
+   Bifrost listens on http://127.0.0.1:8080 and has a web UI there. Inference calls need the virtual key; the dashboard needs an admin account (see `docs/OWNER_TODO.md`).
 3. Run the smoke test. It always uses the real clients, whatever `MOCK_MODE` says:
 
    ```bash
@@ -200,7 +201,8 @@ All variables are in `.env.example`. The app reads them in `backend/app/config.p
 | `MOCK_MODE` | `true` uses bundled fixtures and no network. Anything other than `false` or `0` counts as true. | n/a | Yes | `true` |
 | `BIFROST_BASE_URL` | Base URL of the Bifrost gateway. | [Bifrost docs](https://docs.getbifrost.ai) | When `MOCK_MODE=false` | `http://127.0.0.1:8080` |
 | `BIFROST_API_KEY` | Bearer key if the gateway has auth turned on. | Your Bifrost setup | No | empty |
-| `BIFROST_VIRTUAL_KEY` | Bifrost virtual key sent as `x-bf-vk`, for budgets and rate limits. | Your Bifrost setup | No | empty |
+| `BIFROST_VIRTUAL_KEY` | Bifrost virtual key sent as `x-bf-vk`. Must start with `sk-bf-`. The gateway reads the same value for `bifrost/config.json`. | Make one: `echo sk-bf-$(openssl rand -hex 24)` | Yes in live mode | empty |
+| `BIFROST_SETUP_TOKEN` | Bifrost setup token, used once to create the dashboard admin account. | `openssl rand -hex 32` | No | empty |
 | `MODEL_EXTRACT` | Model for claim extraction. | Any model your Bifrost providers serve | Yes | `groq/openai/gpt-oss-120b` |
 | `MODEL_JUDGE` | Model for judging evidence and rewriting. | Same | Yes | `groq/openai/gpt-oss-120b` |
 | `MODEL_ANSWER` | Model for the ask-mode answer. | Same | Yes | `xai/grok-4.7` |
@@ -271,7 +273,7 @@ From the repo root:
 
 `make test` runs the backend lint, backend tests and frontend lint; `make build` runs the frontend build.
 
-CI (`.github/workflows/ci.yml`) runs these gates on every push and pull request, plus a `docker` job that builds the image, starts it, waits for `/api/health`, and runs one mock check against the container. The container path is exercised by that CI job; it has not been run on the development machines.
+CI (`.github/workflows/ci.yml`) runs these gates on every push and pull request, plus a `docker` job that builds the image, starts it, waits for `/api/health`, and runs one mock check against the container. On Windows, Docker runs inside WSL 2: open `wsl`, then `cd /mnt/c/.../ai-global-hackathon && docker compose ...`. The app image was built and run in WSL Docker with a mock check, and the live profile's gateway started and loaded `bifrost/config.json`; real provider calls still need keys.
 
 ## How AI is used in the product
 
@@ -337,7 +339,6 @@ More in [docs/TEAM.md](docs/TEAM.md).
 ## Limitations and what is next
 
 - No real Bifrost or Tavily call has been made from this repo yet. The two live clients are tested against a mocked HTTP transport written from the current Bifrost and Tavily docs. The smoke test (`make smoke`) is the step that proves the live path with real keys; until it passes, treat live mode as untested.
-- The Docker image and the mock check inside it are covered only by the CI `docker` job, not run on the development machines.
 - English only. The prompts and the mock rules assume English text.
 - No authentication and no users. Anyone who can reach the port can run checks, and in live mode that spends your keys. The Compose file publishes ports on 127.0.0.1 only. Do not expose it more widely without adding auth.
 - Live quality depends on the models you configure. A weaker model can miss claims or misjudge a source, and Tavily's snippets are short, so some claims end as `unverified`.

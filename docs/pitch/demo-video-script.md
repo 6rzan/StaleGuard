@@ -5,6 +5,7 @@ Live mode, real keys. Follows the demo story in `specs/001-stale-answer-detector
 ## Before recording
 
 - `make smoke` prints PASS on all three lines.
+- The Bifrost dashboard admin account is created with the setup token (steps in `docs/OWNER_TODO.md`), so the dashboard can be shown.
 - Bifrost is running and its dashboard is open in a second tab at http://localhost:8080.
 - App open at http://localhost:8000 (Docker) or http://localhost:5173 (dev servers), history empty or irrelevant, `CACHE_ENABLED=false` so every step does real searches and the timing on screen is honest.
 - Rehearse steps 2 and 4 once. The sample text below uses real, fast-changing facts, but live verdicts depend on the models and on what Tavily returns that day. If a claim does not come back stale during rehearsal, swap in another fast-changing fact (a software version, a plan price) and keep the rest of the script.

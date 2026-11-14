@@ -42,20 +42,31 @@ Put them in `.env` on the machine that records the demo (copy from `.env.example
 | `GROQ_API_KEY` | https://console.groq.com/keys (extract, judge, rewrite) |
 | `XAI_API_KEY` | https://console.x.ai (ask-mode answer and fallback) |
 
-Also set `MOCK_MODE=false`. `BIFROST_API_KEY` and `BIFROST_VIRTUAL_KEY` are optional.
+| `BIFROST_VIRTUAL_KEY` | Make it yourself: `echo sk-bf-$(openssl rand -hex 24)`. Required in live mode; must start with `sk-bf-`. |
+| `BIFROST_SETUP_TOKEN` | Make it yourself: `openssl rand -hex 32`. Only to create the dashboard admin account. |
+
+Also set `MOCK_MODE=false`. `BIFROST_API_KEY` is optional.
+
+To open the Bifrost dashboard (needed for the demo video):
+
+1. Put `BIFROST_SETUP_TOKEN` in `.env` and start the gateway.
+2. Open http://localhost:8080.
+3. Go to Workspace, Config, Security.
+4. Turn on password protection.
+5. Paste the setup token when asked.
 
 ### 5. Run the smoke test
 
 No real Bifrost or Tavily call has been made from this repo yet, so this is the first proof that the live path works.
 
 ```bash
-docker compose --profile live up bifrost    # or: npx -y @maximhq/bifrost
+docker compose --profile live up bifrost    # or: npx -y @maximhq/bifrost -app-dir ./bifrost
 make smoke                                  # without make: cd backend && uv run python -m app.smoke
 ```
 
 Without `make`, the dev servers are `cd backend && uv run uvicorn app.main:app --reload --port 8000` and `cd frontend && npm run dev`.
 
-The Bifrost container (`--profile live`) has not been started anywhere yet. If it does not come up with `bifrost/config.json`, use `npx -y @maximhq/bifrost` and add the provider key in its web UI on port 8080.
+The Bifrost container (`--profile live`) has been started in WSL Docker and loads `bifrost/config.json`. If it does not come up, use `npx -y @maximhq/bifrost -app-dir ./bifrost` with the three keys exported in that shell.
 
 All three lines (`bifrost`, `tavily`, `check`) must start with PASS. If one says FAIL, the message says what to check. Fix that before recording anything.
 
