@@ -1,4 +1,4 @@
-"""Prompts for the extract and judge stages. Both ask for a single JSON object."""
+"""Prompts per stage. Extract and judge return one JSON object; answer and rewrite plain text."""
 
 import json
 
@@ -35,6 +35,15 @@ Return one JSON object:
 }
 Prefer newer sources when they disagree. Use "unverified" when the sources do not settle it."""
 
+ANSWER_SYSTEM = """Answer the question directly and factually in one short paragraph of plain text
+(at most 6 sentences). State concrete facts such as names, prices, versions and dates."""
+
+REWRITE_SYSTEM = """You correct outdated statements in a text.
+
+Rewrite the text changing only the listed outdated statements so they state the current value.
+Keep everything else word for word, with the same length and tone. Add no new facts.
+Return only the corrected text, with no preamble or notes."""
+
 
 def extract_messages(answer: str, today: str) -> list[dict]:
     return [
@@ -63,3 +72,16 @@ def judge_messages(
         f"Sources:\n{json.dumps(sources, indent=1)}"
     )
     return [{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": user}]
+
+
+def answer_messages(question: str) -> list[dict]:
+    return [
+        {"role": "system", "content": ANSWER_SYSTEM},
+        {"role": "user", "content": question},
+    ]
+
+
+def rewrite_messages(answer: str, outdated: list[Claim]) -> list[dict]:
+    fixes = "\n".join(f'- "{c.text}" -> current value: {c.current_value}' for c in outdated)
+    user = f"Text:\n{answer}\n\nOutdated statements:\n{fixes}"
+    return [{"role": "system", "content": REWRITE_SYSTEM}, {"role": "user", "content": user}]

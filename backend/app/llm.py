@@ -87,55 +87,73 @@ class BifrostLLM:
         if settings.bifrost_virtual_key:
             self.headers["x-bf-vk"] = settings.bifrost_virtual_key
 
-    async def _chat(self, stage: str, model: str, messages: list[dict], parse: Callable):
-        body = {
-            "model": model,
-            "messages": messages,
-            "temperature": 0,
-            "response_format": {"type": "json_object"},
-        }
+    async def _complete(
+        self, stage: str, model: str, messages: list[dict], json_mode: bool
+    ) -> tuple[str, ModelCall]:
+        """One chat completion: returns the message content and the call record."""
+        body = {"model": model, "messages": messages, "temperature": 0}
+        if json_mode:
+            body["response_format"] = {"type": "json_object"}
         if self.settings.model_fallbacks:
             body["fallbacks"] = self.settings.model_fallbacks
-        async with httpx.AsyncClient(
-            base_url=self.settings.bifrost_base_url,
-            headers=self.headers,
-            timeout=60,
-            transport=self.transport,
-        ) as client:
-            for attempt in range(2):
-                started = time.perf_counter()
-                url = self.settings.bifrost_base_url
-                try:
-                    response = await client.post("/v1/chat/completions", json=body)
-                except httpx.ConnectError:
-                    raise RuntimeError(
-                        f"Cannot reach the Bifrost gateway at {url}. Is it running?"
-                    ) from None
-                except httpx.TimeoutException:
-                    raise RuntimeError(f"Bifrost gateway at {url} timed out after 60 s") from None
-                if response.status_code != 200:
-                    raise RuntimeError(http_failure(
-                        "Bifrost request failed", response,
-                        self.settings.bifrost_api_key, self.settings.bifrost_virtual_key,
-                    ))
-                data = response.json()
-                usage = data.get("usage") or {}
-                served, is_fallback = served_by(model, data)
-                call = ModelCall(
-                    stage=stage,
-                    requested=model,
-                    served_by=served,
-                    is_fallback=is_fallback,
-                    prompt_tokens=int(usage.get("prompt_tokens") or 0),
-                    completion_tokens=int(usage.get("completion_tokens") or 0),
-                    latency_ms=round((time.perf_counter() - started) * 1000),
-                )
-                try:
-                    content = data["choices"][0]["message"]["content"]
-                    return parse(parse_json(content)), call
-                except (KeyError, IndexError, TypeError, ValueError, ValidationError):
-                    if attempt:
-                        raise ValueError(f"{model} returned invalid JSON for {stage}") from None
+        url = self.settings.bifrost_base_url
+        started = time.perf_counter()
+        try:
+            async with httpx.AsyncClient(
+                base_url=url, headers=self.headers, timeout=60, transport=self.transport
+            ) as client:
+                response = await client.post("/v1/chat/completions", json=body)
+        except httpx.ConnectError:
+            raise RuntimeError(
+                f"Cannot reach the Bifrost gateway at {url}. Is it running?"
+            ) from None
+        except httpx.TimeoutException:
+            raise RuntimeError(f"Bifrost gateway at {url} timed out after 60 s") from None
+        if response.status_code != 200:
+            raise RuntimeError(http_failure(
+                "Bifrost request failed", response,
+                self.settings.bifrost_api_key, self.settings.bifrost_virtual_key,
+            ))
+        data = response.json()
+        usage = data.get("usage") or {}
+        served, is_fallback = served_by(model, data)
+        call = ModelCall(
+            stage=stage,
+            requested=model,
+            served_by=served,
+            is_fallback=is_fallback,
+            prompt_tokens=int(usage.get("prompt_tokens") or 0),
+            completion_tokens=int(usage.get("completion_tokens") or 0),
+            latency_ms=round((time.perf_counter() - started) * 1000),
+        )
+        try:
+            content = data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError):
+            content = None
+        return content if isinstance(content, str) else "", call
+
+    async def _chat(self, stage: str, model: str, messages: list[dict], parse: Callable):
+        for attempt in range(2):
+            content, call = await self._complete(stage, model, messages, json_mode=True)
+            try:
+                return parse(parse_json(content)), call
+            except (KeyError, IndexError, TypeError, ValueError, ValidationError):
+                if attempt:
+                    raise ValueError(f"{model} returned invalid JSON for {stage}") from None
+
+    async def _text(self, stage: str, model: str, messages: list[dict]) -> tuple[str, ModelCall]:
+        content, call = await self._complete(stage, model, messages, json_mode=False)
+        if not content.strip():
+            raise ValueError(f"{model} returned an empty {stage}")
+        return content.strip(), call
+
+    async def answer(self, question: str) -> tuple[str, ModelCall]:
+        messages = prompts.answer_messages(question)
+        return await self._text("answer", self.settings.model_answer, messages)
+
+    async def rewrite(self, answer: str, outdated: list[Claim]) -> tuple[str, ModelCall]:
+        messages = prompts.rewrite_messages(answer, outdated)
+        return await self._text("rewrite", self.settings.model_judge, messages)
 
     async def extract_claims(self, answer: str) -> tuple[list[RawClaim], ModelCall]:
         def parse(data: dict) -> list[RawClaim]:

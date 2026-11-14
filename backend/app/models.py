@@ -44,16 +44,12 @@ class Sample(BaseModel):
 
 class CheckRequest(BaseModel):
     answer: str | None = Field(default=None, min_length=1, max_length=8000)
-    question: str | None = None
+    question: str | None = Field(default=None, min_length=1, max_length=2000)
 
     @model_validator(mode="after")
-    def exactly_one(self) -> "CheckRequest":
+    def answer_or_question(self) -> "CheckRequest":
         if self.answer is None and self.question is None:
-            raise ValueError("Provide an answer to check.")
-        if self.answer is not None and self.question is not None:
-            raise ValueError("Provide either answer or question, not both.")
-        if self.answer is None:
-            raise ValueError("Ask mode (question without answer) is not available yet.")
+            raise ValueError("Provide an answer to check or a question to ask.")
         return self
 
 
@@ -173,3 +169,12 @@ class Judgement(BaseModel):
 class SearchResult(BaseModel):
     evidence: list[Evidence]
     answer: str | None = None
+
+
+class CachedVerification(BaseModel):
+    volatility: Volatility
+    verdict: Verdict
+    confidence: float
+    current_value: str | None
+    explanation: str | None
+    evidence: list[Evidence]

@@ -20,6 +20,7 @@ class Settings:
     model_fallbacks: list[str] = field(default_factory=list)
     tavily_api_key: str = ""
     max_claims: int = 8
+    cache_enabled: bool = True
     database_path: Path = BACKEND_DIR / "data" / "staleguard.db"
 
     @property
@@ -46,5 +47,6 @@ def load_settings() -> Settings:
         model_fallbacks=[m.strip() for m in env.get("MODEL_FALLBACKS", "").split(",") if m.strip()],
         tavily_api_key=env.get("TAVILY_API_KEY", ""),
         max_claims=int(env.get("MAX_CLAIMS") or defaults.max_claims),
+        cache_enabled=env.get("CACHE_ENABLED", "true").strip().lower() not in ("false", "0"),
         database_path=db_path if db_path.is_absolute() else BACKEND_DIR / db_path,
     )

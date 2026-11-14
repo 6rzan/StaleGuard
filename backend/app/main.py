@@ -61,9 +61,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         check = Check(
             id=uuid.uuid4().hex[:12],
             created_at=to_iso(datetime.now(UTC)),
-            status="queued",
+            # No answer means ask mode: run_check generates it first.
+            status="queued" if request.answer else "generating",
             mode=settings.mode,
-            answer=request.answer,
+            question=request.question,
+            answer=request.answer or "",
         )
         store.save(settings.database_path, check)
         if wait:

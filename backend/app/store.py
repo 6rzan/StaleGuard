@@ -13,6 +13,10 @@ def init(path: Path) -> None:
         conn.execute(
             "CREATE TABLE IF NOT EXISTS checks (id TEXT PRIMARY KEY, created_at TEXT, data TEXT)"
         )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS claim_cache "
+            "(key TEXT PRIMARY KEY, created_at TEXT, data TEXT)"
+        )
 
 
 def save(path: Path, check: Check) -> None:
@@ -36,3 +40,21 @@ def list_recent(path: Path, limit: int) -> list[Check]:
             "SELECT data FROM checks ORDER BY created_at DESC, rowid DESC LIMIT ?", (limit,)
         ).fetchall()
     return [Check.model_validate_json(r[0]) for r in rows]
+
+
+def cache_get(path: Path, key: str) -> tuple[str, str] | None:
+    with closing(sqlite3.connect(path)) as conn:
+        row = conn.execute(
+            "SELECT created_at, data FROM claim_cache WHERE key = ?", (key,)
+        ).fetchone()
+    return (row[0], row[1]) if row else None
+
+
+def cache_put(path: Path, key: str, created_at: str, data: str) -> None:
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(
+            "INSERT INTO claim_cache (key, created_at, data) VALUES (?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET created_at = excluded.created_at, "
+            "data = excluded.data",
+            (key, created_at, data),
+        )
