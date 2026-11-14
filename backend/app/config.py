@@ -14,9 +14,9 @@ class Settings:
     bifrost_base_url: str = "http://127.0.0.1:8080"
     bifrost_api_key: str = ""
     bifrost_virtual_key: str = ""
-    model_extract: str = "openai/gpt-4o-mini"
-    model_judge: str = "openai/gpt-4o"
-    model_answer: str = "openai/gpt-4o-mini"
+    model_extract: str = "groq/openai/gpt-oss-120b"
+    model_judge: str = "groq/openai/gpt-oss-120b"
+    model_answer: str = "xai/grok-4.7"
     model_fallbacks: list[str] = field(default_factory=list)
     tavily_api_key: str = ""
     max_claims: int = 8

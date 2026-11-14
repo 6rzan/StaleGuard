@@ -1,4 +1,4 @@
-"""BifrostLLM: chat completions through the Bifrost gateway (OpenAI-compatible)."""
+"""BifrostLLM: chat completions through the Bifrost gateway (chat completions API)."""
 
 import json
 import re
@@ -63,10 +63,9 @@ def served_by(requested: str, data: dict) -> tuple[str, bool]:
     model = routing.get("model") or data.get("model")
     if not model:
         served = requested
-    elif "/" in model:
-        served = model
     elif provider:
-        served = f"{provider}/{model}"
+        # Model ids may contain a slash themselves (groq reports openai/gpt-oss-120b).
+        served = model if model.startswith(f"{provider}/") else f"{provider}/{model}"
     elif requested.split("/", 1)[-1] == model:
         served = requested
     else:
@@ -94,8 +93,9 @@ class BifrostLLM:
         body = {"model": model, "messages": messages, "temperature": 0}
         if json_mode:
             body["response_format"] = {"type": "json_object"}
-        if self.settings.model_fallbacks:
-            body["fallbacks"] = self.settings.model_fallbacks
+        fallbacks = [m for m in self.settings.model_fallbacks if m != model]
+        if fallbacks:
+            body["fallbacks"] = fallbacks
         url = self.settings.bifrost_base_url
         started = time.perf_counter()
         try:

@@ -1,20 +1,20 @@
 {
   "providers": {
-    "openai": {
+    "groq": {
       "keys": [
         {
-          "name": "openai-default",
-          "value": "env.OPENAI_API_KEY",
+          "name": "groq-default",
+          "value": "env.GROQ_API_KEY",
           "models": ["*"],
           "weight": 1.0
         }
       ]
     },
-    "anthropic": {
+    "xai": {
       "keys": [
         {
-          "name": "anthropic-default",
-          "value": "env.ANTHROPIC_API_KEY",
+          "name": "xai-default",
+          "value": "env.XAI_API_KEY",
           "models": ["*"],
           "weight": 1.0
         }
