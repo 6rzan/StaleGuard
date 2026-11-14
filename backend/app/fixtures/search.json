@@ -5,6 +5,7 @@
     "verdict": "outdated",
     "confidence": 0.9,
     "current_value": "$25 per user per month since September 2026",
+    "corrected_text": "The Pro plan costs $25 per month per user and includes unlimited projects.",
     "explanation": "Sources 1 and 2, both from the last two months, list the Pro plan at $25 per user per month.",
     "results": [
       {"title": "Northwind Cloud pricing", "url": "https://example.com/northwind/pricing", "snippet": "Pro: $25 per user per month, billed monthly. Unlimited projects.", "days_ago": 43, "score": 0.93, "stance": "contradicts"},
@@ -30,6 +31,7 @@
     "verdict": "outdated",
     "confidence": 0.9,
     "current_value": "Version 4.0, released in September 2026",
+    "corrected_text": "The latest stable release of the Lumen API is version 4.0, released in September 2026.",
     "explanation": "The changelog (source 1) and release announcement (source 2) show 4.0 replaced 3.2 as the stable release.",
     "results": [
       {"title": "Lumen API changelog", "url": "https://example.com/lumen/changelog", "snippet": "4.0.0 (stable): new pagination, removed v2 endpoints.", "days_ago": 30, "score": 0.95, "stance": "contradicts"},
@@ -67,6 +69,7 @@
     "verdict": "outdated",
     "confidence": 0.9,
     "current_value": "Daniel Reyes, CEO since August 2026",
+    "corrected_text": "Kestrel Labs is led by CEO Daniel Reyes, who succeeded Maria Okafor in August 2026.",
     "explanation": "Sources 1 and 2 report that Maria Okafor stepped down and Daniel Reyes became CEO in August 2026.",
     "results": [
       {"title": "Kestrel Labs names Daniel Reyes chief executive", "url": "https://example.com/news/kestrel-new-ceo", "snippet": "Daniel Reyes takes over as CEO, succeeding Maria Okafor.", "days_ago": 80, "score": 0.94, "stance": "contradicts"},

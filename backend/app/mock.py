@@ -10,6 +10,7 @@ from .models import Claim, Evidence, Judgement, ModelCall, RawClaim, SearchResul
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SEARCH_FIXTURES = json.loads((FIXTURES / "search.json").read_text(encoding="utf-8"))
+SAMPLES = json.loads((FIXTURES / "samples.json").read_text(encoding="utf-8"))
 SEARCH_DELAY_S = 0.3  # makes the progressive UI visible; tests set it to 0
 MOCK_MODEL = "mock/rules"
 
@@ -56,7 +57,25 @@ def mock_call(stage: str) -> ModelCall:
                      prompt_tokens=0, completion_tokens=0, latency_ms=0)
 
 
+def words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", text.lower()) if len(w) > 3}
+
+
 class MockLLM:
+    async def answer(self, question: str) -> tuple[str, ModelCall]:
+        asked = words(question)
+        best = max(SAMPLES, key=lambda s: len(asked & words(s["question"] or "")))
+        if not asked & words(best["question"] or ""):
+            best = SAMPLES[0]
+        return best["answer"], mock_call("answer")
+
+    async def rewrite(self, answer: str, outdated: list[Claim]) -> tuple[str, ModelCall]:
+        for claim in outdated:
+            entry = match_fixture(claim.text)
+            if entry and entry.get("corrected_text"):
+                answer = answer.replace(claim.text, entry["corrected_text"], 1)
+        return answer, mock_call("rewrite")
+
     async def extract_claims(self, answer: str) -> tuple[list[RawClaim], ModelCall]:
         return [classify(s) for s in sentences(answer)], mock_call("extract")
 
