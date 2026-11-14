@@ -131,7 +131,8 @@ The recency number depends on the date of the run because the mock sources are d
 [Bifrost](https://docs.getbifrost.ai) is the gateway between the app and the model providers. The app never talks to Groq or xAI directly and never holds a provider key. The client is `backend/app/llm.py`.
 
 - Endpoint: `POST {BIFROST_BASE_URL}/v1/chat/completions`, the chat completions route. Models are named `provider/model`, for example `groq/openai/gpt-oss-120b` (provider `groq`, model id `openai/gpt-oss-120b`).
-- Request body: `model`, `messages`, `temperature: 0`, `response_format: {"type": "json_object"}` for extract and judge, and `fallbacks` set from `MODEL_FALLBACKS` when it is not empty.
+- Request body: `model`, `messages`, `temperature: 0`, `response_format: {"type": "json_object"}` for extract and judge, and `fallbacks` set from `MODEL_FALLBACKS` (the requested model itself is left out; the field is omitted when nothing is left).
+- Rate limits and retries: Groq's free tier has small per-model token limits. The app retries an HTTP 429 from the gateway up to 2 more times (waiting `Retry-After`, at most 10 s, else 2 s then 4 s). The default fallbacks make the gateway fail over within Groq first (`groq/openai/gpt-oss-20b` has its own rate limit), then to xAI (`xai/grok-4.7`).
 - Per-stage routing: `MODEL_EXTRACT` (structured output), `MODEL_JUDGE` (reasons over sources, also used for the rewrite) and `MODEL_ANSWER` (ask mode). Changing a model is an env change, not a code change.
 - Why this split: the high-volume structured stages (extract, judge, rewrite) run on an open-weight model on Groq, which is fast and cheap per call. The answer in ask mode comes from a different vendor, xAI Grok, so StaleGuard checks a model it did not use to judge, and Grok is also the failover if Groq fails. Moving a stage to another provider is an env change only; the gateway and the app code stay the same.
 - Headers: `Authorization: Bearer` when `BIFROST_API_KEY` is set, and `x-bf-vk` when `BIFROST_VIRTUAL_KEY` is set, so the gateway can apply budgets and rate limits per app.
@@ -206,7 +207,7 @@ All variables are in `.env.example`. The app reads them in `backend/app/config.p
 | `MODEL_EXTRACT` | Model for claim extraction. | Any model your Bifrost providers serve | Yes | `groq/openai/gpt-oss-120b` |
 | `MODEL_JUDGE` | Model for judging evidence and rewriting. | Same | Yes | `groq/openai/gpt-oss-120b` |
 | `MODEL_ANSWER` | Model for the ask-mode answer. | Same | Yes | `xai/grok-4.7` |
-| `MODEL_FALLBACKS` | Comma-separated models Bifrost tries on failure. | Same | No | empty in the app; `xai/grok-4.7` in `.env.example` |
+| `MODEL_FALLBACKS` | Comma-separated models Bifrost tries on failure. | Same | No | `groq/openai/gpt-oss-20b,xai/grok-4.7` (free-tier rate limits: the gateway fails over within Groq first, then to xAI). Set it to empty to turn fallbacks off. |
 | `TAVILY_API_KEY` | Tavily search key. | [app.tavily.com](https://app.tavily.com) | When `MOCK_MODE=false` | empty |
 | `MAX_CLAIMS` | Most flagged claims verified per check. | n/a | No | `8` |
 | `DATABASE_PATH` | SQLite file. | n/a | No | `backend/data/staleguard.db` |
