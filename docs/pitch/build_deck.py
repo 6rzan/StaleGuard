@@ -356,7 +356,7 @@ def slide5():
     s = Slide(bg=BG)
     s.notes = (
         "Every model call goes through one Bifrost endpoint, so the app never holds a provider key. "
-        "Extract, judge and rewrite run on an open-weight model on Groq; ask-mode answers come from xAI Grok, a different vendor, so StaleGuard checks a model it did not use to judge, and Grok is also the failover. "
+        "Extract, judge and rewrite run on gpt-oss-120b on Groq. Ask-mode answers use xAI Grok when an xAI key is set, otherwise gpt-oss-120b. On rate limits Bifrost fails over within Groq to gpt-oss-20b, then to Grok. "
         "The app has its own virtual key with a 5 USD daily budget, 60 requests per minute and an allowed-model list, enforced by the gateway. "
         "The UI strip shows which model served each stage, tagged as fallback when Grok stepped in."
     )
@@ -380,15 +380,17 @@ def slide5():
     s.text(bx, 4.8, pw, 0.95, [
         para("Groq", 17, INK, bold=True, align="c"),
         para("gpt-oss-120b", 12, GREEN, font="mono", align="c"),
+        para("failover: 20b", 12, MUTED, font="mono", align="c"),
     ], anchor="mid")
     s.rect(bx + bw - pw, 4.8, pw, 0.95, fill=CARD, line=BORDER, lw=1.0, r=0.1)
     s.text(bx + bw - pw, 4.8, pw, 0.95, [
         para("xAI", 17, INK, bold=True, align="c"),
-        para("grok-4.7, failover", 12, GREEN, font="mono", align="c"),
+        para("grok-4.7", 12, GREEN, font="mono", align="c"),
+        para("ask mode, fallback", 12, MUTED, font="mono", align="c"),
     ], anchor="mid")
     items = [
-        ("Per-stage routing", "Groq runs extract, judge and rewrite. xAI Grok answers in ask mode. A model change is an env change."),
-        ("Automatic failover", "Grok is the fallback if Groq fails. The UI tags a fallback call with the model that served it."),
+        ("Per-stage routing", "Groq gpt-oss-120b runs extract, judge and rewrite. Ask-mode answers use Grok when an xAI key is set, otherwise gpt-oss-120b."),
+        ("Automatic failover", "On rate limits Bifrost fails over within Groq to gpt-oss-20b, then to Grok. The UI tags a fallback call."),
         ("Virtual key", "The app's own key: 5 USD a day, 60 requests a minute, allowed models only. The gateway enforces it."),
         ("Usage per stage", "Model and total tokens in the app, per-call tokens and latency in the API response."),
     ]
@@ -402,12 +404,12 @@ def slide5():
     return s
 
 
-def slide6(claim_crop):
+def slide6():
     s = Slide(bg=BG)
     s.notes = (
         "Tavily is where the evidence comes from. Each flagged claim gets one search, and the judge reads up to five ranked results with their dates and snippets. "
         "Leadership and company-fact claims use Tavily's news topic; everything else uses general search. "
-        "The publication dates feed the recency part of the score, and a source with no date counts as neutral. The screenshot is mock data."
+        "The publication dates feed the recency part of the score, and a source with no date counts as neutral. The screenshot is a live run with real sources: Python 3.12 flagged stale, current value Python 3.15."
     )
     chrome(s, 6, "What Tavily contributes", "Live evidence for every flagged claim")
     items = [
@@ -425,10 +427,8 @@ def slide6(claim_crop):
             para(body, 14, MUTED),
         ], anchor="mid")
     ih = 4.75
-    iw = ih * Image.open(claim_crop).size[0] / Image.open(claim_crop).size[1]
-    ix = W - MX - iw
-    s.image(claim_crop, ix, 1.75, h=ih)
-    caption(s, ix - 0.6, 1.75 + ih + 0.08, iw + 0.6, "A stale claim with its sources. Mock data.", align="r")
+    iw, _ = s.image(MEDIA / "screenshot-live-claim.png", W - MX - ih * 864 / 990, 1.75, h=ih)
+    caption(s, W - MX - iw - 1.2, 1.75 + ih + 0.08, iw + 1.2, "Live run: a stale claim with its sources", align="r")
     return s
 
 
@@ -483,14 +483,14 @@ def slide8():
     s = Slide(bg=BG)
     s.notes = (
         "The prototype runs with one command and needs no keys: mock mode uses bundled fictional fixtures and makes no network calls. "
-        "The backend has 76 tests and CI is green on three jobs: backend, frontend and docker. Other tools can call the JSON API as a verification layer. "
-        "To be straight about it: live mode with real Groq, xAI and Tavily keys is wired and tested against mocked transports, but the first real run, make smoke, has not happened yet."
+        "The backend has 84 tests and CI is green on three jobs: backend, frontend and docker. Other tools can call the JSON API as a verification layer. "
+        "It has also run live: make smoke passed, and through the UI the answer about Python 3.12 and Node.js 20 finished in 13.3 seconds with both claims stale, current values Python 3.15 and Node.js 26 from dated sources, and all 4 model calls on gpt-oss-120b through Bifrost. The screenshot is that run."
     )
     chrome(s, 8, "Working prototype", "A working prototype that runs in one command")
     items = [
         ("One command", "$ docker compose up", True),
         ("Mock mode", "No keys, no network calls", False),
-        ("Tested", "76 backend tests; CI green on backend, frontend and docker", False),
+        ("Tested", "84 backend tests; CI green on backend, frontend and docker", False),
         ("A verification layer", "POST /api/checks?wait=true returns the JSON report", False),
     ]
     for i, (h1, body, mono) in enumerate(items):
@@ -500,14 +500,14 @@ def slide8():
             para(h1, 17, INK, bold=True, after=2),
             para(body, 13 if mono else 14, GREEN if mono else MUTED, font="mono" if mono else "sans"),
         ])
-    ax = 4.95
-    aw, ah = s.image(MEDIA / "screenshot-ask.png", ax, 1.8, w=5.2)
-    caption(s, ax, 1.8 + ah + 0.08, aw, "Ask mode on a fictional API. Mock data.")
-    ny = 1.8 + ah + 0.5
-    s.rect(ax, ny, aw, 6.8 - ny, fill=AMBER_BG, line=AMBER, lw=1.0, r=0.1)
-    s.text(ax + 0.2, ny, aw - 0.4, 6.8 - ny, [
-        runs([("Live path not run yet. ", dict(bold=True, color=AMBER)),
-              ("No real Groq, xAI or Tavily call has been made; the first run with keys is make smoke.", {})], 13),
+    ax, ih = 4.55, 3.9
+    iw, _ = s.image(MEDIA / "screenshot-live-report.png", ax, 1.8, h=ih)
+    caption(s, ax, 1.8 + ih + 0.08, iw, "Live run, real sources")
+    bx = ax + iw + 0.25
+    s.rect(bx, 1.8, 10.25 - bx, ih, fill=GREEN_BG, line=GREEN, lw=1.0, r=0.1)
+    s.text(bx + 0.2, 1.8, 10.25 - bx - 0.4, ih, [
+        para("Verified live", 16, GREEN, bold=True, after=6),
+        para("make smoke passed. A real run: both claims stale, Python 3.15 and Node.js 26 from dated sources, 13.3 s, 4 model calls on gpt-oss-120b via Bifrost.", 13, INK),
     ], anchor="mid")
     mh = 4.85
     mw = mh * 750 / 1624
@@ -769,11 +769,8 @@ def main():
 
     register_fonts()
     tmp = Path(tempfile.mkdtemp(prefix="staleguard-deck-"))
-    # Crop the claim card out of the full screenshot; the original file is untouched.
-    claim_crop = tmp / "claim-card.png"
-    Image.open(MEDIA / "screenshot-claim.png").crop((148, 56, 858, 800)).save(claim_crop)
 
-    slides = [slide1(), slide2(), slide3(), slide4(), slide5(), slide6(claim_crop), slide7(), slide8(), slide9()]
+    slides = [slide1(), slide2(), slide3(), slide4(), slide5(), slide6(), slide7(), slide8(), slide9()]
     assert len(slides) == TOTAL
     problems = []
     for n, sl in enumerate(slides, 1):
