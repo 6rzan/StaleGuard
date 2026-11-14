@@ -36,7 +36,7 @@ async def run(settings: Settings) -> bool:
         else:
             hint = (
                 f"Check: is the gateway running at {settings.bifrost_base_url}? "
-                f"Are GROQ_API_KEY and XAI_API_KEY set for Bifrost? "
+                f"Is GROQ_API_KEY set for Bifrost? "
                 f"Is '{settings.model_extract}' a valid provider/model name?"
             )
         print(f"FAIL bifrost  {message}. {hint}")

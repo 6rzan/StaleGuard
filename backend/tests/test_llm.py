@@ -29,13 +29,13 @@ def make_llm(responses: list[dict], seen: list[httpx.Request], **settings) -> Bi
 async def test_request_carries_model_fallbacks_and_virtual_key():
     seen = []
     llm = make_llm([completion(json.dumps(CLAIMS))], seen,
-                   model_fallbacks=["xai/grok-4.7"], bifrost_virtual_key="vk-test")
+                   model_fallbacks=["groq/openai/gpt-oss-20b"], bifrost_virtual_key="vk-test")
     claims, call = await llm.extract_claims("The Pro plan costs $20.")
 
     body = json.loads(seen[0].content)
     assert seen[0].url.path == "/v1/chat/completions"
     assert body["model"] == "groq/openai/gpt-oss-120b"
-    assert body["fallbacks"] == ["xai/grok-4.7"]
+    assert body["fallbacks"] == ["groq/openai/gpt-oss-20b"]
     assert body["temperature"] == 0
     assert body["response_format"] == {"type": "json_object"}
     assert seen[0].headers["x-bf-vk"] == "vk-test"
@@ -57,11 +57,11 @@ async def test_no_fallbacks_or_virtual_key_when_unset():
 
 async def test_served_by_and_fallback_from_routing_info():
     routing = {"extra_fields": {"routing_info": {
-        "provider": "xai", "model": "grok-4.7", "is_fallback": True}}}
+        "provider": "groq", "model": "openai/gpt-oss-20b", "is_fallback": True}}}
     seen = []
     llm = make_llm([completion(json.dumps(CLAIMS), **routing)], seen)
     _, call = await llm.extract_claims("x")
-    assert call.served_by == "xai/grok-4.7"
+    assert call.served_by == "groq/openai/gpt-oss-20b"
     assert call.is_fallback is True
 
 
@@ -84,11 +84,12 @@ async def test_response_model_field_alone_is_not_a_fallback():
 async def test_fallback_equal_to_requested_model_is_dropped():
     seen = []
     llm = make_llm([{"choices": [{"message": {"content": "A."}}]}] * 2, seen,
-                   model_fallbacks=["xai/grok-4.7"])
-    await llm.answer("q")  # requests xai/grok-4.7
-    assert "fallbacks" not in json.loads(seen[0].content)
-    await llm.rewrite("a", [])  # requests the Groq judge model
-    assert json.loads(seen[1].content)["fallbacks"] == ["xai/grok-4.7"]
+                   model_fallbacks=["groq/openai/gpt-oss-120b", "groq/openai/gpt-oss-20b"])
+    await llm.answer("q")  # requests the 120b model, which is also in the list
+    assert json.loads(seen[0].content)["fallbacks"] == ["groq/openai/gpt-oss-20b"]
+    llm.settings.model_fallbacks = ["groq/openai/gpt-oss-120b"]
+    await llm.rewrite("a", [])  # requests the 120b model: nothing left
+    assert "fallbacks" not in json.loads(seen[1].content)
 
 
 async def test_fenced_json_is_tolerated():
