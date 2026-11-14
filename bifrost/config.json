@@ -37,7 +37,8 @@
           {
             "provider": "groq",
             "allowed_models": [
-              "openai/gpt-oss-120b"
+              "openai/gpt-oss-120b",
+              "openai/gpt-oss-20b"
             ],
             "key_ids": [
               "*"

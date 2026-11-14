@@ -169,6 +169,7 @@ class Judgement(BaseModel):
 class SearchResult(BaseModel):
     evidence: list[Evidence]
     answer: str | None = None
+    calls: int = 1  # HTTP requests made, so a retry counts toward usage.search_calls
 
 
 class CachedVerification(BaseModel):

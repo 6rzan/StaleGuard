@@ -1,5 +1,6 @@
 """BifrostLLM: chat completions through the Bifrost gateway (chat completions API)."""
 
+import asyncio
 import json
 import re
 import time
@@ -14,6 +15,8 @@ from .config import Settings
 from .models import Claim, Evidence, Judgement, ModelCall, RawClaim
 
 STANCES = ("supports", "contradicts", "neutral")
+RETRY_DELAYS = (2, 4)  # seconds before retries after an HTTP 429
+MAX_RETRY_AFTER = 10
 FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 
 
@@ -98,17 +101,25 @@ class BifrostLLM:
             body["fallbacks"] = fallbacks
         url = self.settings.bifrost_base_url
         started = time.perf_counter()
-        try:
-            async with httpx.AsyncClient(
-                base_url=url, headers=self.headers, timeout=60, transport=self.transport
-            ) as client:
-                response = await client.post("/v1/chat/completions", json=body)
-        except httpx.ConnectError:
-            raise RuntimeError(
-                f"Cannot reach the Bifrost gateway at {url}. Is it running?"
-            ) from None
-        except httpx.TimeoutException:
-            raise RuntimeError(f"Bifrost gateway at {url} timed out after 60 s") from None
+        for delay in (*RETRY_DELAYS, None):
+            try:
+                async with httpx.AsyncClient(
+                    base_url=url, headers=self.headers, timeout=60, transport=self.transport
+                ) as client:
+                    response = await client.post("/v1/chat/completions", json=body)
+            except httpx.ConnectError:
+                raise RuntimeError(
+                    f"Cannot reach the Bifrost gateway at {url}. Is it running?"
+                ) from None
+            except httpx.TimeoutException:
+                raise RuntimeError(f"Bifrost gateway at {url} timed out after 60 s") from None
+            if response.status_code != 429 or delay is None:
+                break
+            try:
+                delay = min(float(response.headers["Retry-After"]), MAX_RETRY_AFTER)
+            except (KeyError, ValueError):
+                pass
+            await asyncio.sleep(delay)
         if response.status_code != 200:
             raise RuntimeError(http_failure(
                 "Bifrost request failed", response,

@@ -17,7 +17,9 @@ class Settings:
     model_extract: str = "groq/openai/gpt-oss-120b"
     model_judge: str = "groq/openai/gpt-oss-120b"
     model_answer: str = "xai/grok-4.7"
-    model_fallbacks: list[str] = field(default_factory=list)
+    model_fallbacks: list[str] = field(
+        default_factory=lambda: ["groq/openai/gpt-oss-20b", "xai/grok-4.7"]
+    )
     tavily_api_key: str = ""
     max_claims: int = 8
     cache_enabled: bool = True
@@ -44,7 +46,8 @@ def load_settings() -> Settings:
         model_extract=env.get("MODEL_EXTRACT") or defaults.model_extract,
         model_judge=env.get("MODEL_JUDGE") or defaults.model_judge,
         model_answer=env.get("MODEL_ANSWER") or defaults.model_answer,
-        model_fallbacks=[m.strip() for m in env.get("MODEL_FALLBACKS", "").split(",") if m.strip()],
+        model_fallbacks=defaults.model_fallbacks if "MODEL_FALLBACKS" not in env
+        else [m.strip() for m in env["MODEL_FALLBACKS"].split(",") if m.strip()],
         tavily_api_key=env.get("TAVILY_API_KEY", ""),
         max_claims=int(env.get("MAX_CLAIMS") or defaults.max_claims),
         cache_enabled=env.get("CACHE_ENABLED", "true").strip().lower() not in ("false", "0"),

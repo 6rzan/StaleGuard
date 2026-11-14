@@ -157,7 +157,7 @@ async def _run(check: Check, settings: Settings, llm: LLM, search: Search, start
                     check.usage.cache_hits += 1
                 else:
                     result = await search.search(claim)
-                    check.usage.search_calls += 1
+                    check.usage.search_calls += result.calls
                     claim.evidence = result.evidence
                     if result.evidence:
                         judgement, call = await llm.judge(
