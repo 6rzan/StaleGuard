@@ -222,8 +222,8 @@ export function HowItWorks() {
 const STACK: { mark: string; name: string; role: string }[] = [
   { mark: "TV", name: "Tavily", role: "Live web search" },
   { mark: "BF", name: "Bifrost", role: "LLM gateway, failover" },
-  { mark: "GQ", name: "Groq", role: "gpt-oss-120b extracts and judges" },
-  { mark: "xAI", name: "xAI", role: "Grok answers in ask mode" },
+  { mark: "GQ", name: "Groq", role: "Hosts gpt-oss for every stage" },
+  { mark: "OSS", name: "gpt-oss", role: "Open-weight 120b, 20b as fallback" },
   { mark: "FA", name: "FastAPI", role: "Backend API" },
   { mark: "RE", name: "React", role: "This interface" },
   { mark: "SQL", name: "SQLite", role: "History and claim cache" },
