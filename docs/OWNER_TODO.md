@@ -40,7 +40,6 @@ Put them in `.env` on the machine that records the demo (copy from `.env.example
 |---|---|
 | `TAVILY_API_KEY` | https://app.tavily.com |
 | `GROQ_API_KEY` | https://console.groq.com/keys (extract, judge, rewrite) |
-| `XAI_API_KEY` | Optional. https://console.x.ai. Only if you want Grok to write ask-mode answers; then set `MODEL_ANSWER=xai/grok-4.7`. Without it, ask mode uses `gpt-oss-120b`. |
 
 | `BIFROST_VIRTUAL_KEY` | Make it yourself: `echo sk-bf-$(openssl rand -hex 24)`. Required in live mode; must start with `sk-bf-`. |
 | `BIFROST_SETUP_TOKEN` | Make it yourself: `openssl rand -hex 32`. Only to create the dashboard admin account. |

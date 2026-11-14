@@ -83,7 +83,7 @@ flowchart LR
     EX -->|chat completions| BF["Bifrost gateway"]
     JU -->|chat completions| BF
     BF --> P1["Groq: gpt-oss-120b"]
-    BF -.->|failover| P2["xAI: Grok"]
+    BF -.->|failover| P2["Groq: gpt-oss-20b (fallback)"]
     SE -->|REST| TV["Tavily"]
 ```
 
@@ -135,18 +135,18 @@ The recency number depends on the date of the run because the mock sources are d
 
 ## How Bifrost is used
 
-[Bifrost](https://docs.getbifrost.ai) is the gateway between the app and the model providers. The app never talks to Groq or xAI directly and never holds a provider key. The client is `backend/app/llm.py`.
+[Bifrost](https://docs.getbifrost.ai) is the gateway between the app and the model providers. The app never talks to Groq directly and never holds a provider key. The client is `backend/app/llm.py`.
 
 - Endpoint: `POST {BIFROST_BASE_URL}/v1/chat/completions`, the chat completions route. Models are named `provider/model`, for example `groq/openai/gpt-oss-120b` (provider `groq`, model id `openai/gpt-oss-120b`).
 - Request body: `model`, `messages`, `temperature: 0`, `response_format: {"type": "json_object"}` for extract and judge, and `fallbacks` set from `MODEL_FALLBACKS` (the requested model itself is left out; the field is omitted when nothing is left).
-- Rate limits and retries: Groq's free tier has small per-model token limits. The app retries an HTTP 429 from the gateway up to 2 more times (waiting `Retry-After`, at most 10 s, else 2 s then 4 s). The default fallbacks make the gateway fail over within Groq first (`groq/openai/gpt-oss-20b` has its own rate limit), then to xAI (`xai/grok-4.7`).
+- Rate limits and retries: Groq's free tier has small per-model token limits. The app retries an HTTP 429 from the gateway up to 2 more times (waiting `Retry-After`, at most 10 s, else 2 s then 4 s). The default fallback is `groq/openai/gpt-oss-20b`, which has its own rate limit, so the gateway can fail over to it on a 429.
 - Per-stage routing: `MODEL_EXTRACT` (structured output), `MODEL_JUDGE` (reasons over sources, also used for the rewrite) and `MODEL_ANSWER` (ask mode). Changing a model is an env change, not a code change.
-- Why this split: the high-volume structured stages (extract, judge, rewrite) run on an open-weight model on Groq, which is fast and cheap per call. The answer in ask mode comes from a different vendor, xAI Grok, so StaleGuard checks a model it did not use to judge, and Grok is also the failover if Groq fails. Moving a stage to another provider is an env change only; the gateway and the app code stay the same.
+- Why one model family on Groq: the larger open-weight model, `gpt-oss-120b`, runs every stage (answer, extract, judge, rewrite), which is fast and cheap per call. The smaller `gpt-oss-20b` is the gateway's failover on rate limits. Changing a model is an env change only; the gateway and the app code stay the same.
 - Headers: `Authorization: Bearer` when `BIFROST_API_KEY` is set, and `x-bf-vk` when `BIFROST_VIRTUAL_KEY` is set, so the gateway can apply budgets and rate limits per app.
 - What the app reads back: `choices[0].message.content`, `usage.prompt_tokens` and `completion_tokens`, and which provider and model served the call from `extra_fields.routing_info` (falling back to the `model` field).
 - Where it shows: the "Models via Bifrost gateway" strip under each result lists one entry per stage with the model requested (the judge entry shows a count, one call per claim). When a fallback answered, the entry gets a "fallback" tag with the model that served it. The strip also shows totals for tokens, searches, cache hits (when there are any) and duration. Per-call latency and token counts are in the API response (`model_calls`), not in the strip. `GET /api/health` reports the configured models.
 - Virtual key: the app has its own Bifrost virtual key (`vk-staleguard` in `bifrost/config.json`, value from `BIFROST_VIRTUAL_KEY`, sent as `x-bf-vk`). The gateway enforces a budget of 5 USD per day and 60 requests per minute on it, and only lets it use the two configured models.
-- The provider keys live only in the Bifrost container, loaded from `bifrost/config.json` (`env.GROQ_API_KEY`, `env.XAI_API_KEY`). Every request also shows up in the Bifrost dashboard on port 8080.
+- The provider keys live only in the Bifrost container, loaded from `bifrost/config.json` (`env.GROQ_API_KEY`). Every request also shows up in the Bifrost dashboard on port 8080.
 
 ## How Tavily is used
 
@@ -168,14 +168,14 @@ Live mode sends the answer text to Bifrost and your providers, and the claims to
    cp .env.example .env
    ```
 
-   Set `MOCK_MODE=false` and `TAVILY_API_KEY=...`. Also set `GROQ_API_KEY`, `XAI_API_KEY` and `BIFROST_VIRTUAL_KEY` (make one with `echo sk-bf-$(openssl rand -hex 24)`); `bifrost/config.json` reads them, and the app sends the virtual key to the gateway. Check that `MODEL_EXTRACT`, `MODEL_JUDGE` and `MODEL_ANSWER` name models your provider keys can use.
+   Set `MOCK_MODE=false` and `TAVILY_API_KEY=...`. Also set `GROQ_API_KEY` and `BIFROST_VIRTUAL_KEY` (make one with `echo sk-bf-$(openssl rand -hex 24)`); `bifrost/config.json` reads them, and the app sends the virtual key to the gateway. Check that `MODEL_EXTRACT`, `MODEL_JUDGE` and `MODEL_ANSWER` name models your provider keys can use.
 2. Start Bifrost, either with the Compose service:
 
    ```bash
    docker compose --profile live up bifrost
    ```
 
-   or directly with Node. Export `GROQ_API_KEY`, `XAI_API_KEY` and `BIFROST_VIRTUAL_KEY` in that shell first, and point Bifrost at this repo's config:
+   or directly with Node. Export `GROQ_API_KEY` and `BIFROST_VIRTUAL_KEY` in that shell first, and point Bifrost at this repo's config:
 
    ```bash
    npx -y @maximhq/bifrost -app-dir ./bifrost
@@ -213,13 +213,12 @@ All variables are in `.env.example`. The app reads them in `backend/app/config.p
 | `BIFROST_SETUP_TOKEN` | Bifrost setup token, used once to create the dashboard admin account. | `openssl rand -hex 32` | No | empty |
 | `MODEL_EXTRACT` | Model for claim extraction. | Any model your Bifrost providers serve | Yes | `groq/openai/gpt-oss-120b` |
 | `MODEL_JUDGE` | Model for judging evidence and rewriting. | Same | Yes | `groq/openai/gpt-oss-120b` |
-| `MODEL_ANSWER` | Model for the ask-mode answer. | Same | Yes | `xai/grok-4.7` |
-| `MODEL_FALLBACKS` | Comma-separated models Bifrost tries on failure. | Same | No | `groq/openai/gpt-oss-20b,xai/grok-4.7` (free-tier rate limits: the gateway fails over within Groq first, then to xAI). Set it to empty to turn fallbacks off. |
+| `MODEL_ANSWER` | Model for the ask-mode answer. | Same | Yes | `groq/openai/gpt-oss-120b` |
+| `MODEL_FALLBACKS` | Comma-separated models Bifrost tries on failure. | Same | No | `groq/openai/gpt-oss-20b` (free-tier rate limits: the gateway fails over to the smaller Groq model). Set it to empty to turn fallbacks off. |
 | `TAVILY_API_KEY` | Tavily search key. | [app.tavily.com](https://app.tavily.com) | When `MOCK_MODE=false` | empty |
 | `MAX_CLAIMS` | Most flagged claims verified per check. | n/a | No | `8` |
 | `DATABASE_PATH` | SQLite file. | n/a | No | `backend/data/staleguard.db` |
 | `GROQ_API_KEY` | Groq key, read by Bifrost, not by the app. | [console.groq.com](https://console.groq.com/keys) | For the Groq models | empty |
-| `XAI_API_KEY` | xAI key, read by Bifrost, not by the app. | [console.x.ai](https://console.x.ai) | For the Grok models | empty |
 | `CACHE_ENABLED` | Reuse verified claims for a while. | n/a | No | `true` |
 
 `DATABASE_PATH` in `.env.example` is `data/staleguard.db`. A relative path is resolved against the `backend/` folder (`backend/app/config.py` does this), wherever the process starts.
@@ -346,7 +345,7 @@ More in [docs/TEAM.md](docs/TEAM.md).
 
 ## Limitations and what is next
 
-- Verified live on 15 Nov 2026 with real Groq and Tavily keys: `make smoke` passes all three lines, and full checks ran through the UI and through ask mode. Not verified yet: the xAI path (no xAI key, so ask mode uses `gpt-oss-120b` via `MODEL_ANSWER`) and the failover to `groq/openai/gpt-oss-20b`, which the Groq project has to enable first.
+- Verified live on 15 Nov 2026 with real Groq and Tavily keys: `make smoke` passes all three lines, and full checks ran through the UI and through ask mode. Not verified yet: the failover to `groq/openai/gpt-oss-20b`, which the Groq project has to enable first.
 - Groq's free tier allows about 8,000 tokens per minute on `gpt-oss-120b`, so back-to-back checks can hit HTTP 429. The app retries, and the gateway fails over to `gpt-oss-20b` once that model is enabled in the Groq project. Leave about a minute between live checks on the free tier.
 - English only. The prompts and the mock rules assume English text.
 - No authentication and no users. Anyone who can reach the port can run checks, and in live mode that spends your keys. The Compose file publishes ports on 127.0.0.1 only. Do not expose it more widely without adding auth.
