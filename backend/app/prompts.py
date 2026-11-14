@@ -33,7 +33,12 @@ Return one JSON object:
   "explanation": one or two sentences citing the sources by number,
   "stances": one entry per source in order, each "supports" | "contradicts" | "neutral"
 }
-Prefer newer sources when they disagree. Use "unverified" when the sources do not settle it."""
+Prefer newer sources when they disagree. Use "unverified" when the sources do not settle it.
+A source can only contradict the claim if it is at least as recent as the event or date the claim
+describes; an older source that gives an earlier value is "neutral", not "contradicts".
+When the claim names a release or change dated after the newest source and no source contradicts
+it, the verdict is "unverified", not "outdated".
+current_value must come from the newest source that states it."""
 
 ANSWER_SYSTEM = """Answer the question directly and factually in one short paragraph of plain text
 (at most 6 sentences). State concrete facts such as names, prices, versions and dates."""

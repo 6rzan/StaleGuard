@@ -47,7 +47,8 @@ async def test_request_carries_model_fallbacks_and_virtual_key():
 
 async def test_no_fallbacks_or_virtual_key_when_unset():
     seen = []
-    llm = make_llm([completion(json.dumps(CLAIMS))], seen, bifrost_api_key="sk-test")
+    llm = make_llm([completion(json.dumps(CLAIMS))], seen, bifrost_api_key="sk-test",
+                   model_fallbacks=[])
     await llm.extract_claims("x")
     assert "fallbacks" not in json.loads(seen[0].content)
     assert "x-bf-vk" not in seen[0].headers
@@ -167,3 +168,57 @@ async def test_unreachable_gateway_names_the_url():
     llm = BifrostLLM(Settings(), transport=httpx.MockTransport(handler))
     with pytest.raises(RuntimeError, match=r"Cannot reach the Bifrost gateway at http://127\.0\.0\.1:8080"):
         await llm.extract_claims("x")
+
+
+@pytest.fixture
+def waits(monkeypatch):
+    seen = []
+
+    async def record(seconds):
+        seen.append(seconds)
+
+    monkeypatch.setattr("app.llm.asyncio.sleep", record)
+    return seen
+
+
+def flaky_llm(statuses: list[int], headers: dict | None = None):
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        status = statuses[len(calls) - 1]
+        if status == 429:
+            return httpx.Response(429, json={"error": {"message": "Rate limit reached"}},
+                                  headers=headers or {})
+        return httpx.Response(200, json=completion(json.dumps(CLAIMS)))
+
+    return BifrostLLM(Settings(), transport=httpx.MockTransport(handler)), calls
+
+
+async def test_429_is_retried_with_backoff(waits):
+    llm, calls = flaky_llm([429, 429, 200])
+    claims, _ = await llm.extract_claims("x")
+    assert len(calls) == 3 and waits == [2, 4] and len(claims) == 1
+
+
+async def test_429_honours_retry_after_capped_at_ten_seconds(waits):
+    llm, calls = flaky_llm([429, 200], headers={"Retry-After": "30"})
+    await llm.extract_claims("x")
+    assert waits == [10]
+
+
+async def test_three_429s_raise_the_usual_error(waits):
+    llm, calls = flaky_llm([429, 429, 429])
+    with pytest.raises(RuntimeError, match="Bifrost request failed: HTTP 429: Rate limit reached"):
+        await llm.extract_claims("x")
+    assert len(calls) == 3
+
+
+async def test_other_errors_are_not_retried(waits):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, json={})
+
+    llm = BifrostLLM(Settings(), transport=httpx.MockTransport(handler))
+    with pytest.raises(RuntimeError, match="HTTP 500"):
+        await llm.extract_claims("x")
+    assert waits == []

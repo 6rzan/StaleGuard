@@ -23,6 +23,24 @@ def tavily(seen: list, status: int = 200, payload: dict | None = None) -> Tavily
     return TavilySearch(settings, transport=httpx.MockTransport(handler))
 
 
+@pytest.mark.parametrize(("volatility", "time_range"),
+                         [("high", "month"), ("medium", "year"), ("low", None)])
+async def test_time_range_by_volatility(volatility, time_range):
+    seen = []
+    item = {"url": "https://a.example", "content": "x"}
+    result = await tavily(seen, payload={"results": [item]}).search(
+        claim("pricing").model_copy(update={"volatility": volatility}))
+    assert json.loads(seen[0].content).get("time_range") == time_range
+    assert len(seen) == 1 and result.calls == 1
+
+
+async def test_empty_filtered_search_is_repeated_without_time_range():
+    seen = []
+    result = await tavily(seen).search(claim("pricing"))  # medium volatility, no results
+    assert [json.loads(r.content).get("time_range") for r in seen] == ["year", None]
+    assert result.calls == 2 and result.evidence == []
+
+
 @pytest.mark.parametrize(
     ("category", "topic"),
     [("leadership", "news"), ("company_fact", "news"), ("pricing", "general"),
