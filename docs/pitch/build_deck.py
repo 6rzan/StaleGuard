@@ -356,9 +356,9 @@ def slide5():
     s = Slide(bg=BG)
     s.notes = (
         "Every model call goes through one Bifrost endpoint, so the app never holds a provider key. "
-        "Extract, judge and rewrite run on gpt-oss-120b on Groq. Ask-mode answers use xAI Grok when an xAI key is set, otherwise gpt-oss-120b. On rate limits Bifrost fails over within Groq to gpt-oss-20b, then to Grok. "
+        "Every stage, extract, judge, rewrite and the ask-mode answer, runs on gpt-oss-120b on Groq. On Groq free-tier rate limits Bifrost fails over to the smaller gpt-oss-20b. "
         "The app has its own virtual key with a 5 USD daily budget, 60 requests per minute and an allowed-model list, enforced by the gateway. "
-        "The UI strip shows which model served each stage, tagged as fallback when Grok stepped in."
+        "The UI strip shows which model served each stage, tagged as fallback when gpt-oss-20b stepped in."
     )
     chrome(s, 5, "What Bifrost contributes", "One gateway for every model call")
     bx, bw = MX, 4.2
@@ -380,18 +380,18 @@ def slide5():
     s.text(bx, 4.8, pw, 0.95, [
         para("Groq", 17, INK, bold=True, align="c"),
         para("gpt-oss-120b", 12, GREEN, font="mono", align="c"),
-        para("failover: 20b", 12, MUTED, font="mono", align="c"),
+        para("every stage", 12, MUTED, font="mono", align="c"),
     ], anchor="mid")
     s.rect(bx + bw - pw, 4.8, pw, 0.95, fill=CARD, line=BORDER, lw=1.0, r=0.1)
     s.text(bx + bw - pw, 4.8, pw, 0.95, [
-        para("xAI", 17, INK, bold=True, align="c"),
-        para("grok-4.7", 12, GREEN, font="mono", align="c"),
-        para("ask mode, fallback", 12, MUTED, font="mono", align="c"),
+        para("Groq", 17, INK, bold=True, align="c"),
+        para("gpt-oss-20b", 12, GREEN, font="mono", align="c"),
+        para("failover", 12, MUTED, font="mono", align="c"),
     ], anchor="mid")
     items = [
-        ("Per-stage routing", "Groq gpt-oss-120b runs extract, judge and rewrite. Ask-mode answers use Grok when an xAI key is set, otherwise gpt-oss-120b."),
-        ("Automatic failover", "On rate limits Bifrost fails over within Groq to gpt-oss-20b, then to Grok. The UI tags a fallback call."),
-        ("Virtual key", "The app's own key: 5 USD a day, 60 requests a minute, allowed models only. The gateway enforces it."),
+        ("Per-stage routing", "One open-weight model family on Groq: gpt-oss-120b runs every stage. A model change is an env change."),
+        ("Automatic failover", "On Groq free-tier rate limits the gateway fails over to the smaller gpt-oss-20b. The UI tags a fallback call."),
+        ("Virtual key", "The app's own key: 5 USD a day, 60 requests a minute, allowed models only (the two gpt-oss models). The gateway enforces it."),
         ("Usage per stage", "Model and total tokens in the app, per-call tokens and latency in the API response."),
     ]
     cw, ch, gx, gy = 3.6, 2.2, 0.25, 0.25
