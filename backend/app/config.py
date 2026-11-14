@@ -11,7 +11,7 @@ REPO_DIR = BACKEND_DIR.parent
 @dataclass
 class Settings:
     mock_mode: bool = True
-    bifrost_base_url: str = "http://localhost:8080"
+    bifrost_base_url: str = "http://127.0.0.1:8080"
     bifrost_api_key: str = ""
     bifrost_virtual_key: str = ""
     model_extract: str = "openai/gpt-4o-mini"

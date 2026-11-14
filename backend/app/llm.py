@@ -4,6 +4,7 @@ import json
 import re
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 import httpx
 from pydantic import ValidationError
@@ -18,10 +19,35 @@ FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 
 def parse_json(content: str) -> dict:
     fenced = FENCE.search(content)
-    data = json.loads(fenced.group(1) if fenced else content)
+    if fenced:
+        text = fenced.group(1)
+    else:
+        # Fallback models may ignore response_format and wrap the object in prose.
+        start, end = content.find("{"), content.rfind("}")
+        text = content[start : end + 1] if 0 <= start < end else content
+    data = json.loads(text)
     if not isinstance(data, dict):
         raise ValueError("expected a JSON object")
     return data
+
+
+def http_failure(prefix: str, response: httpx.Response, *secrets: str) -> str:
+    """`prefix: HTTP <code>[: server message]`, with any configured key masked out."""
+    message = f"{prefix}: HTTP {response.status_code}"
+    try:
+        data = response.json()
+    except ValueError:
+        return message
+    detail = (data.get("error") or data.get("detail")) if isinstance(data, dict) else None
+    if isinstance(detail, dict):
+        detail = detail.get("message") or detail.get("error")
+    if not detail:
+        return message
+    detail = str(detail)
+    for secret in secrets:
+        if secret:
+            detail = detail.replace(secret, "***")
+    return f"{message}: {detail[:200]}"
 
 
 def served_by(requested: str, data: dict) -> tuple[str, bool]:
@@ -78,9 +104,20 @@ class BifrostLLM:
         ) as client:
             for attempt in range(2):
                 started = time.perf_counter()
-                response = await client.post("/v1/chat/completions", json=body)
+                url = self.settings.bifrost_base_url
+                try:
+                    response = await client.post("/v1/chat/completions", json=body)
+                except httpx.ConnectError:
+                    raise RuntimeError(
+                        f"Cannot reach the Bifrost gateway at {url}. Is it running?"
+                    ) from None
+                except httpx.TimeoutException:
+                    raise RuntimeError(f"Bifrost gateway at {url} timed out after 60 s") from None
                 if response.status_code != 200:
-                    raise RuntimeError(f"Bifrost request failed: HTTP {response.status_code}")
+                    raise RuntimeError(http_failure(
+                        "Bifrost request failed", response,
+                        self.settings.bifrost_api_key, self.settings.bifrost_virtual_key,
+                    ))
                 data = response.json()
                 usage = data.get("usage") or {}
                 served, is_fallback = served_by(model, data)
@@ -113,9 +150,8 @@ class BifrostLLM:
                     continue  # one malformed claim should not discard the rest
             return claims
 
-        return await self._chat(
-            "extract", self.settings.model_extract, prompts.extract_messages(answer), parse
-        )
+        messages = prompts.extract_messages(answer, datetime.now(UTC).date().isoformat())
+        return await self._chat("extract", self.settings.model_extract, messages, parse)
 
     async def judge(
         self, claim: Claim, evidence: list[Evidence], search_answer: str | None, today: str

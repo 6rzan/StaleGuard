@@ -6,6 +6,7 @@ from email.utils import parsedate_to_datetime
 import httpx
 
 from .config import Settings
+from .llm import http_failure
 from .models import Claim, Evidence, SearchResult, to_iso
 
 TAVILY_URL = "https://api.tavily.com/search"
@@ -42,12 +43,17 @@ class TavilySearch:
             "include_published_date": True,
             "search_depth": "basic",
         }
-        async with httpx.AsyncClient(timeout=20, transport=self.transport) as client:
-            response = await client.post(
-                TAVILY_URL, json=body, headers={"Authorization": f"Bearer {self.api_key}"}
-            )
+        try:
+            async with httpx.AsyncClient(timeout=20, transport=self.transport) as client:
+                response = await client.post(
+                    TAVILY_URL, json=body, headers={"Authorization": f"Bearer {self.api_key}"}
+                )
+        except httpx.ConnectError:
+            raise RuntimeError(f"Cannot reach Tavily at {TAVILY_URL}. Check the network.") from None
+        except httpx.TimeoutException:
+            raise RuntimeError(f"Tavily at {TAVILY_URL} timed out after 20 s") from None
         if response.status_code != 200:
-            raise RuntimeError(f"Tavily search failed: HTTP {response.status_code}")
+            raise RuntimeError(http_failure("Tavily search failed", response, self.api_key))
         data = response.json()
         evidence = []
         for r in data.get("results") or []:

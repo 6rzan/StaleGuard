@@ -32,6 +32,29 @@ def save(settings: Settings, check: Check, started: float) -> None:
 async def run_check(check_id: str, settings: Settings, llm: LLM, search: Search) -> Check:
     started = time.perf_counter()
     check = store.get(settings.database_path, check_id)
+    try:
+        await _run(check, settings, llm, search, started)
+    except Exception as exc:
+        # Never leave a check stuck in a running status: the client polls until done/error.
+        check.status = "error"
+        check.error = f"Check failed: {short_error(exc)}"
+        save(settings, check, started)
+    return check
+
+
+def apply(claim: Claim, judgement: Judgement, now: datetime) -> None:
+    score, breakdown = score_claim(judgement.verdict, judgement.confidence,
+                                   claim.category, claim.volatility, claim.evidence, now)
+    claim.verdict = judgement.verdict
+    claim.confidence = judgement.confidence
+    claim.current_value = judgement.current_value
+    claim.explanation = judgement.explanation
+    claim.freshness_score = score
+    claim.score_breakdown = breakdown
+    claim.label = label_for(judgement.verdict, score)
+
+
+async def _run(check: Check, settings: Settings, llm: LLM, search: Search, started: float) -> None:
     check.status = "extracting"
     save(settings, check, started)
 
@@ -41,7 +64,7 @@ async def run_check(check_id: str, settings: Settings, llm: LLM, search: Search)
         check.status = "error"
         check.error = f"Claim extraction failed: {short_error(exc)}"
         save(settings, check, started)
-        return check
+        return
     check.model_calls.append(call)
 
     used: set[int] = set()
@@ -92,25 +115,15 @@ async def run_check(check_id: str, settings: Settings, llm: LLM, search: Search)
                 else:
                     judgement = Judgement(verdict="unverified", confidence=0.0,
                                           explanation="No sources found for this claim.")
+                apply(claim, judgement, now)
                 claim.status = "done"
             except Exception as exc:
-                judgement = Judgement(verdict="unverified", confidence=0.0,
-                                      explanation="Verification failed for this claim.")
                 claim.status = "error"
                 claim.error = short_error(exc)
-
-            score, breakdown = score_claim(judgement.verdict, judgement.confidence,
-                                           claim.category, claim.volatility, claim.evidence, now)
-            claim.verdict = judgement.verdict
-            claim.confidence = judgement.confidence
-            claim.current_value = judgement.current_value
-            claim.explanation = judgement.explanation
-            claim.freshness_score = score
-            claim.score_breakdown = breakdown
-            claim.label = label_for(judgement.verdict, score)
+                apply(claim, Judgement(verdict="unverified", confidence=0.0,
+                                       explanation="Verification failed for this claim."), now)
             save(settings, check, started)
 
     await asyncio.gather(*(verify(c) for c in to_verify))
     check.status = "done"
     save(settings, check, started)
-    return check

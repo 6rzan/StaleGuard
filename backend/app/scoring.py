@@ -1,7 +1,7 @@
 """Deterministic freshness score (plan.md "Freshness score"). Pure functions; `now` is passed in."""
 
 import math
-from datetime import datetime
+from datetime import UTC, datetime
 
 from .models import Claim, Evidence, Label, ScoreBreakdown, Summary, Verdict, Volatility
 
@@ -26,7 +26,12 @@ def _round(x: float) -> int:
 def _recency(item: Evidence, half_life: float, now: datetime) -> float:
     if not item.published_date:
         return 0.5
-    published = datetime.fromisoformat(item.published_date)
+    try:
+        published = datetime.fromisoformat(item.published_date)
+    except ValueError:
+        return 0.5
+    if published.tzinfo is None:
+        published = published.replace(tzinfo=UTC)
     age_days = max((now - published).total_seconds() / 86400, 0.0)
     return math.exp(-age_days / half_life)
 
