@@ -1,6 +1,6 @@
 // Regenerates every file in docs/media/ (demo GIF, screenshots, social preview).
 //
-// Needs: the built app served on http://127.0.0.1:8000 in mock mode with an EMPTY
+// Needs: the built app served on http://127.0.0.1:8000 in mock mode (set MOCK_MODE=true, it beats .env) with an EMPTY
 // database (the claim cache would otherwise change what the report shows), Playwright
 // installed outside this repo, and uv (the GIF is assembled with Pillow via `uv run --with`).
 //
@@ -44,7 +44,7 @@ imgs, durs = [], []
 for i, f in enumerate(files):
     im = Image.open(f).convert("RGB")
     im = im.resize((960, round(im.height * 960 / im.width)), Image.LANCZOS)
-    d = (stamps[i + 1] - stamps[i]) if i + 1 < len(files) else 1500
+    d = (stamps[i + 1] - stamps[i]) if i + 1 < len(files) else 1000
     if imgs and ImageChops.difference(imgs[-1], im).getbbox() is None:
         durs[-1] += d
     else:
@@ -54,13 +54,31 @@ pal[0].save(out, save_all=True, append_images=pal[1:], duration=durs, loop=0, op
 print(len(files), "frames captured,", len(imgs), "kept,", sum(durs) / 1000, "seconds")
 `;
 
+// The sticky nav covers the top 64 px, so "start" leaves 80 px and "center" never goes above that.
 async function smoothScrollTo(page, selector, block = "center") {
   await page.evaluate(
-    ([sel, b]) => document.querySelector(sel).scrollIntoView({ behavior: "smooth", block: b }),
+    ([sel, b]) => {
+      const r = document.querySelector(sel).getBoundingClientRect();
+      const lift = b === "start" ? 80 : Math.max(80, (innerHeight - r.height) / 2);
+      scrollTo({ top: scrollY + r.top - lift, behavior: "smooth" });
+    },
     [selector, block],
   );
-  await sleep(1400);
+  await sleep(1100);
 }
+
+// The nav is slightly see-through; stills make it opaque so text scrolling under it does not ghost through.
+const OPAQUE_NAV = ".site-nav { background: #0d0d0d !important; backdrop-filter: none !important; }";
+async function newStillPage(browser, options) {
+  const context = await browser.newContext({ reducedMotion: "reduce", ...options });
+  const page = await context.newPage();
+  await page.addInitScript((css) => addEventListener("DOMContentLoaded", () => {
+    document.head.insertAdjacentHTML("beforeend", `<style>${css}</style>`);
+  }), OPAQUE_NAV);
+  return { context, page };
+}
+// 85 % view: a 1506x941 layout viewport captured at scale 0.85 gives a 1280x800 image.
+const SCALED = { viewport: { width: 1506, height: 941 }, deviceScaleFactor: 0.85 };
 
 async function recordDemo(browser) {
   const context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: "no-preference" });
@@ -81,101 +99,109 @@ async function recordDemo(browser) {
     }
   })();
 
-  await sleep(1200);
+  await sleep(1500);
+  await smoothScrollTo(page, "#checker", "start");
+  await sleep(500);
   await page.getByRole("button", { name: "SaaS pricing" }).click();
   await sleep(1100);
   await page.getByRole("button", { name: "Check freshness" }).click();
   await page.getByText(/^Finished in/).waitFor({ timeout: 60000 });
-  await sleep(900);
+  await sleep(600);
   await smoothScrollTo(page, ".claim-card:has(.now)");
-  await sleep(1300);
+  await sleep(900);
   await smoothScrollTo(page, ".corrected");
-  await sleep(1500);
+  await sleep(700);
+  await page.getByRole("button", { name: "Show what changed" }).click();
+  await sleep(1400);
 
   capturing = false;
   await loop;
 
-  // Stills come from the same finished check, so the claims are not marked "cached".
+  await context.close();
+}
+
+async function stillReport(browser) {
+  const { context, page } = await newStillPage(browser, { viewport: VIEWPORT });
+  await page.goto(base);
+  await openFirstHistory(page, /Northwind/);
   await smoothScrollTo(page, ".result", "start");
   await page.screenshot({ path: still("screenshot-report.png") });
+  await context.close();
+}
 
-  const card = page.locator(".claim-card:has(.now)").first();
-  await card.locator("details.breakdown summary").click();
-  // The open card is taller than the viewport; shrink the page a little so it fits.
-  await page.evaluate(() => (document.documentElement.style.zoom = "0.74"));
-  await smoothScrollTo(page, ".claim-card:has(.now)", "center");
+async function stillClaim(browser) {
+  const { context, page } = await newStillPage(browser, SCALED);
+  await page.goto(base);
+  await openFirstHistory(page, /Northwind/);
+  await page.locator(".claim-card:has(.now) details.breakdown summary").click();
+  await smoothScrollTo(page, ".claim-card:has(.now) .verdict", "start");
   await page.screenshot({ path: still("screenshot-claim.png") });
   await context.close();
 }
 
+// Opens a past check from the history list: the same report, no new run (so no "cached" tags).
+async function openFirstHistory(page, text) {
+  await page.locator(".history button, .history a").filter({ hasText: text }).first().click();
+  await page.getByText(/^Finished in/).waitFor();
+  await sleep(800);
+}
+
 async function stillAsk(browser) {
-  const context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: "reduce" });
-  const page = await context.newPage();
-  await page.goto(base);
+  const { context, page } = await newStillPage(browser, SCALED);
+  await page.goto(base + "/#checker");
   await page.getByRole("button", { name: "Ask a model" }).click();
   await page.getByRole("button", { name: "API versions" }).click();
   await page.getByRole("button", { name: "Ask and check" }).click();
   await page.getByText(/^Finished in/).waitFor({ timeout: 60000 });
   await page.getByRole("button", { name: "Show what changed" }).click();
   await sleep(600);
-  // Zoomed out so the mode switch, the answer and the corrected answer share one screen.
-  await page.evaluate(() => (document.documentElement.style.zoom = "0.62"));
-  await smoothScrollTo(page, "#main", "start");
+  // The report starts with the question the model was asked, which marks this as ask mode.
+  await smoothScrollTo(page, ".result", "start");
   await page.screenshot({ path: still("screenshot-ask.png") });
   await context.close();
 }
 
 async function stillMobile(browser) {
-  const context = await browser.newContext({
+  const { context, page } = await newStillPage(browser, {
     viewport: { width: 375, height: 812 },
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
-    reducedMotion: "reduce",
   });
-  const page = await context.newPage();
   await page.goto(base);
-  // Open the pricing check from history: same report, no new run.
-  await page.locator(".history button, .history a").filter({ hasText: /Northwind/ }).first().click();
-  await page.getByText(/^Finished in/).waitFor();
-  await sleep(800);
-  await page.evaluate(() => document.querySelector(".result").scrollIntoView({ block: "start" }));
-  await sleep(500);
+  await openFirstHistory(page, /Northwind/);
+  await smoothScrollTo(page, ".result", "start");
   await page.screenshot({ path: still("screenshot-mobile.png") });
   await context.close();
 }
 
+// docs/media/social-preview.html is hand-written; it loads Google Fonts, so this needs network.
 async function socialPreview(browser) {
-  const html = fs
-    .readFileSync(path.join(os.homedir(), ".claude/skills/repo-launch-checklist/assets/social-preview.html"), "utf8")
-    .replace("--bg: #0b0d12; --fg: #f4f5f7; --muted: #9aa3b2; --accent: #7c5cff;", "--bg: #f6f3ec; --fg: #1d1b16; --muted: #4a463d; --accent: #0f4c5c;")
-    .replace("#151925", "#fffdf8")
-    .replaceAll("#262c3d", "#ddd6c6")
-    .replace("background: #11141c", "background: #fffdf8")
-    .replace("{{EYEBROW, e.g. open source · MIT}}", "Tavily + Bifrost")
-    .replace("{{PROJECT NAME}}", "StaleGuard")
-    .replace(
-      "{{ONE-LINE DESCRIPTION}}",
-      "Catch outdated facts in LLM answers: re-check each claim against the live web and score its freshness.",
-    )
-    .replace("{{INSTALL COMMAND}}", "docker compose up")
-    .replace("{{SCREENSHOT PATH OR DATA URI}}", "screenshot-report.png")
-    .replace("max-width: 34ch", "max-width: 30ch")
-    .replace("font-size: 32px; line-height: 1.3", "font-size: 30px; line-height: 1.3")
-    .replace("object-fit: cover", "object-fit: cover; object-position: top left");
-  const file = path.join(media, "social-preview.html");
-  fs.writeFileSync(file, html);
   const page = await browser.newPage({ viewport: { width: 1280, height: 640 } });
-  await page.goto("file:///" + file.replaceAll("\\", "/"));
+  await page.goto("file:///" + path.join(media, "social-preview.html").replaceAll("\\", "/"));
+  await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: still("social-preview.png") });
   await page.close();
+}
+
+async function stillLanding(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await page.goto(base);
+  await page.evaluate(() => document.fonts.ready);
+  await sleep(600);
+  await page.screenshot({ path: still("screenshot-landing.png") });
+  await context.close();
 }
 
 const browser = await chromium.launch();
 try {
   await recordDemo(browser);
+  await stillReport(browser);
+  await stillClaim(browser);
   await stillAsk(browser);
   await stillMobile(browser);
+  await stillLanding(browser);
   await socialPreview(browser);
 } finally {
   await browser.close();
