@@ -40,7 +40,7 @@ Put them in `.env` on the machine that records the demo (copy from `.env.example
 |---|---|
 | `TAVILY_API_KEY` | https://app.tavily.com |
 | `GROQ_API_KEY` | https://console.groq.com/keys (extract, judge, rewrite) |
-| `XAI_API_KEY` | https://console.x.ai (ask-mode answer and fallback) |
+| `XAI_API_KEY` | Optional. https://console.x.ai. Only if you want Grok to write ask-mode answers; then set `MODEL_ANSWER=xai/grok-4.7`. Without it, ask mode uses `gpt-oss-120b`. |
 
 | `BIFROST_VIRTUAL_KEY` | Make it yourself: `echo sk-bf-$(openssl rand -hex 24)`. Required in live mode; must start with `sk-bf-`. |
 | `BIFROST_SETUP_TOKEN` | Make it yourself: `openssl rand -hex 32`. Only to create the dashboard admin account. |
@@ -57,7 +57,11 @@ To open the Bifrost dashboard (needed for the demo video):
 
 ### 5. Run the smoke test
 
-No real Bifrost or Tavily call has been made from this repo yet, so this is the first proof that the live path works.
+Passed on 15 Nov 2026 with real keys: bifrost (served by `groq/openai/gpt-oss-120b`, about 1.3 s), tavily (5 results) and check all PASS. Re-run it if you change keys or models.
+
+To do: enable `openai/gpt-oss-20b` in the Groq project (console.groq.com, project settings, models) so the gateway can fail over on rate limits. Today Groq answers "blocked at the project level" for it.
+
+When recording, wait about a minute between live checks: the Groq free tier allows about 8,000 tokens per minute and back-to-back checks can hit HTTP 429.
 
 ```bash
 docker compose --profile live up bifrost    # or: npx -y @maximhq/bifrost -app-dir ./bifrost

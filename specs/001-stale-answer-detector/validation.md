@@ -59,3 +59,12 @@ Each batch is accepted only after the diff was read and the gates were run by th
 - Gates: lint 0 warnings; strict build clean; no new npm dependency (Google Fonts link only).
 - Reviewer check with Playwright at 1440 px and 375 px: full landing, a full check on the pricing sample, corrected answer, claim cards, history; `scrollWidth` equals the viewport at both widths; console clean. The implementer also ran all three samples, ask mode with diff, history reopen, and an in-page WCAG text-contrast check (337 text nodes, lowest ratio 5.63:1).
 - Skills used as the team asked: `ui-ux-pro-max` (style, font pairing, contrast and scroll guidelines) and `impeccable` (shape, craft floor, detector: no findings).
+
+## Live verification, 15 Nov
+
+- `make smoke`: PASS bifrost (served_by `groq/openai/gpt-oss-120b`, about 1.3 s), PASS tavily (5 results), PASS check.
+- Real UI in live mode (badge "Live: Bifrost + Tavily"): "Python 3.12 is the latest stable version of Python. The current long-term support release of Node.js is version 20." finished in 13.3 s. Both claims stale (overall scores 7 and 9), current values Python 3.15 and Node.js 26 from dated sources (Wikipedia 8 Aug 2026, herodevs 15 Sep 2026 among them), corrected answer produced, 4 model calls all on `groq/openai/gpt-oss-120b` via Bifrost, 2 searches, 7,158 tokens, no console errors. Screenshots: `docs/media/screenshot-live-report.png`, `docs/media/screenshot-live-claim.png`.
+- Recency false positive, found and fixed in B9: "Python 3.15, released in October 2026" came back unverified and a correct model answer saying 3.15.0 was judged outdated, because Tavily returned old pages that the judge counted as contradicting. Fix: Tavily `time_range` by volatility (month, year, none) with one retry unfiltered, and judge rules that an older source cannot contradict a newer claim. Re-run: the claim is no longer marked outdated, and the ask-mode answer is judged against 3.15.2 (25 Oct 2026).
+- Rate limits: Groq free tier is about 8,000 tokens per minute on `gpt-oss-120b`; an HTTP 429 ended one claim and one ask-mode run. The app now retries 429 (up to 2 more times). The configured failover `groq/openai/gpt-oss-20b` cannot help yet: Groq answers that the model is blocked at the project level, so it must be enabled in the Groq project settings.
+- Not verified: the xAI path (no xAI key; ask mode uses `gpt-oss-120b` via `MODEL_ANSWER`) and failover to `gpt-oss-20b`.
+- Backend tests: 84 passed.

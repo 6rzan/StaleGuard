@@ -61,6 +61,13 @@ Also in the app:
 
 ![Report](docs/media/screenshot-report.png)
 
+### Live run
+
+Real Groq and Tavily keys, 15 Nov 2026, header badge "Live: Bifrost + Tavily". The answer "Python 3.12 is the latest stable version of Python. The current long-term support release of Node.js is version 20." finished in 13.3 s: both claims stale, current values Python 3.15 and Node.js 26 from dated sources (for example Wikipedia, 8 Aug 2026, and herodevs, 15 Sep 2026), and a corrected answer.
+It took 4 model calls, all on `groq/openai/gpt-oss-120b` through Bifrost, 2 searches and 7,158 tokens.
+
+![Live report](docs/media/screenshot-live-report.png)
+
 ## How it works
 
 ```mermaid
@@ -268,7 +275,7 @@ From the repo root:
 | Gate | Command | Covers |
 |---|---|---|
 | Backend lint | `cd backend && uv run ruff check .` | Python style and import order |
-| Backend tests | `cd backend && uv run pytest -q` | 76 tests (last run: 76 passed): score formula, claim spans, the Bifrost and Tavily clients against a mocked HTTP transport, the pipeline, cache, and the API. No network. |
+| Backend tests | `cd backend && uv run pytest -q` | 84 tests (last run: 84 passed): score formula, claim spans, the Bifrost and Tavily clients against a mocked HTTP transport, the pipeline, cache, and the API. No network. |
 | Frontend lint | `cd frontend && npm run lint` | oxlint with warnings denied |
 | Frontend build | `cd frontend && npm run build` | TypeScript check and Vite bundle |
 
@@ -339,7 +346,8 @@ More in [docs/TEAM.md](docs/TEAM.md).
 
 ## Limitations and what is next
 
-- No real Bifrost or Tavily call has been made from this repo yet. The two live clients are tested against a mocked HTTP transport written from the current Bifrost and Tavily docs. The smoke test (`make smoke`) is the step that proves the live path with real keys; until it passes, treat live mode as untested.
+- Verified live on 15 Nov 2026 with real Groq and Tavily keys: `make smoke` passes all three lines, and full checks ran through the UI and through ask mode. Not verified yet: the xAI path (no xAI key, so ask mode uses `gpt-oss-120b` via `MODEL_ANSWER`) and the failover to `groq/openai/gpt-oss-20b`, which the Groq project has to enable first.
+- Groq's free tier allows about 8,000 tokens per minute on `gpt-oss-120b`, so back-to-back checks can hit HTTP 429. The app retries, and the gateway fails over to `gpt-oss-20b` once that model is enabled in the Groq project. Leave about a minute between live checks on the free tier.
 - English only. The prompts and the mock rules assume English text.
 - No authentication and no users. Anyone who can reach the port can run checks, and in live mode that spends your keys. The Compose file publishes ports on 127.0.0.1 only. Do not expose it more widely without adding auth.
 - Live quality depends on the models you configure. A weaker model can miss claims or misjudge a source, and Tavily's snippets are short, so some claims end as `unverified`.
