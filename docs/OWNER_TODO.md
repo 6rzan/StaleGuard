@@ -1,0 +1,84 @@
+# Owner to-do
+
+Things the build account cannot do (it has write access to the repo, not admin). Each item says who does it and gives the exact command or steps.
+
+## Taha (repo owner)
+
+### 1. Set the repo description, topics and Discussions
+
+```bash
+gh repo edit 6rzan/ai-global-hackathon --description "StaleGuard: a stale-answer detector that finds outdated claims in LLM answers, re-verifies them on the live web (Tavily) through the Bifrost gateway, and scores their freshness." --add-topic ai,llm,fact-checking,hallucination-detection,tavily,bifrost,fastapi,react,hackathon --enable-discussions
+```
+
+### 2. Upload the social preview image
+
+GitHub has no API for this. In the repo: Settings, General, Social preview, Edit, upload `docs/media/social-preview.png`.
+
+### 3. Make the repo public (only after the secret scan passes)
+
+Run the audit from the repo root and read item 9 (secret scan). Do not continue unless it says PASS.
+
+```bash
+node ~/.claude/skills/repo-launch-checklist/scripts/audit.mjs --repo .
+```
+
+Then:
+
+```bash
+gh repo edit 6rzan/ai-global-hackathon --visibility public --accept-visibility-change-consequences
+```
+
+After it is public, turn on secret scanning and push protection: Settings, Code security, enable "Secret scanning" and "Push protection".
+
+## The team
+
+### 4. Add real keys
+
+Put them in `.env` on the machine that records the demo (copy from `.env.example`). Never commit `.env`.
+
+| Key | Where to get it |
+|---|---|
+| `TAVILY_API_KEY` | https://app.tavily.com |
+| `OPENAI_API_KEY` | https://platform.openai.com/api-keys |
+| `ANTHROPIC_API_KEY` | https://console.anthropic.com/settings/keys (used by the fallback model) |
+
+Also set `MOCK_MODE=false`. `BIFROST_API_KEY` and `BIFROST_VIRTUAL_KEY` are optional.
+
+### 5. Run the smoke test
+
+No real Bifrost or Tavily call has been made from this repo yet, so this is the first proof that the live path works.
+
+```bash
+docker compose --profile live up bifrost    # or: npx -y @maximhq/bifrost
+make smoke                                  # without make: cd backend && uv run python -m app.smoke
+```
+
+Without `make`, the dev servers are `cd backend && uv run uvicorn app.main:app --reload --port 8000` and `cd frontend && npm run dev`.
+
+The Bifrost container (`--profile live`) has not been started anywhere yet. If it does not come up with `bifrost/config.json`, use `npx -y @maximhq/bifrost` and add the provider key in its web UI on port 8080.
+
+All three lines (`bifrost`, `tavily`, `check`) must start with PASS. If one says FAIL, the message says what to check. Fix that before recording anything.
+
+### Docker on the build machine
+
+Docker Desktop could not start on the build machine because WSL is not installed. The container is verified by the CI `docker` job instead. To run it locally: `wsl --install` in an administrator PowerShell, reboot, then start Docker Desktop.
+
+### 6. Record the demo video
+
+Follow `docs/pitch/demo-video-script.md` (2 to 3 minutes, live mode). Rehearse once first, because live answers depend on the models.
+
+### 7. Put the video link in the README
+
+In `README.md`, replace `<!-- DEMO VIDEO LINK -->` with the link, for example `[Watch on YouTube](https://...)`.
+
+## Esam (team leader)
+
+### 8. Submit on HackCulture
+
+Submit at least 2 hours before the deadline, 15 Nov 2026 23:59 IST (16 Nov 2026 02:29 MYT). In the form:
+
+- Theme: PS06
+- Tick "Tavily integration"
+- Repository link: https://github.com/6rzan/ai-global-hackathon (must be public by then, see item 3)
+- Deck: the files in `docs/pitch/`
+- Video link: the one from item 7
