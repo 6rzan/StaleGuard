@@ -21,3 +21,4 @@ One line per decision, newest last. Times in Malaysia time (UTC+8).
 | 14 Nov 21:55 | Compose ports are bound to 127.0.0.1. | The gateway holds provider keys and has no auth of its own by default. |
 | 14 Nov 21:58 | Docker Desktop does not start on the build machine, so the image is verified by a `docker` job in CI (build, run, health, full mock check). | The README's first command has to be proven somewhere. |
 | 14 Nov 22:05 | All post-MVP tasks (T021–T027) accepted, CI green on three jobs. Remaining: README, media, deck, launch items. | 1.5 h after start. |
+| 14 Nov 22:28 | Released `v0.1.0` on the commit with three green CI jobs. Launch audit: PASS 1 at the start, PASS 11 now. The five open items need the repo owner (description, topics, Discussions, social preview) or the team (demo video link); all are in `docs/OWNER_TODO.md`. | Build finished 1 h 52 min after start; 28 h remain before the deadline for keys, the smoke test, the video and the submission. |
