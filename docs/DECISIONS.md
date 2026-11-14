@@ -17,3 +17,7 @@ One line per decision, newest last. Times in Malaysia time (UTC+8).
 | 14 Nov 20:52 | The CI workflow is committed only once `backend/` and `frontend/` exist. | Avoids a red first run. |
 | 14 Nov 20:52 | `gh repo edit` (description, topics, Discussions) returns 404 for this account (write, not admin). Commands go to `docs/OWNER_TODO.md` for Taha. | No admin permission. |
 | 14 Nov 21:07 | MVP (T001–T020) accepted, on `main`, CI green. Review notes in `specs/001-stale-answer-detector/validation.md`. | 30 minutes after start; the rest of the time goes to post-MVP features, polish and the submission material. |
+| 14 Nov 21:40 | The Bifrost container sits behind a compose profile (`live`). `docker compose up` starts only the app in mock mode; `docker compose --profile live up` adds the gateway. | A keyless first run must never depend on the gateway starting without provider keys. |
+| 14 Nov 21:55 | Compose ports are bound to 127.0.0.1. | The gateway holds provider keys and has no auth of its own by default. |
+| 14 Nov 21:58 | Docker Desktop does not start on the build machine, so the image is verified by a `docker` job in CI (build, run, health, full mock check). | The README's first command has to be proven somewhere. |
+| 14 Nov 22:05 | All post-MVP tasks (T021–T027) accepted, CI green on three jobs. Remaining: README, media, deck, launch items. | 1.5 h after start. |

@@ -48,13 +48,13 @@ Inputs: [spec.md](spec.md), [plan.md](plan.md), [contracts/api.md](contracts/api
 
 ## Phase 5 — Post-MVP
 
-- [ ] T021 [Taha] Ask mode: `question` without `answer` → generate via `MODEL_ANSWER` (status `generating`), then check
-- [ ] T022 [Taha] Corrected answer: rewrite stage fills `corrected_answer` when any claim is outdated (mock: substitute current values)
-- [ ] T023 [Taha] Claim cache in SQLite with TTL by volatility (high 6 h, medium 24 h, low 7 d); `cached` flag and `usage.cache_hits`
-- [ ] T024 [Taha] `Dockerfile` (build frontend, serve from FastAPI) and `docker-compose.yml` (app + bifrost with `bifrost/config.json` reading provider keys from env); `docker compose up` works in mock mode with no keys
-- [ ] T025 [Saadat] `app/smoke.py` (`python -m app.smoke`): one real Bifrost call and one real Tavily call, PASS/FAIL per integration with a clear hint; tests for T021–T023
-- [ ] T026 [Alaa] UI: ask-mode toggle, corrected-answer panel with copy, export report (Markdown), cached indicator
-- [ ] T027 [Alaa] UI polish: motion on score reveal, empty and no-claims states, sponsor roles named in the UI (sources "via Tavily", models "via Bifrost"), phone-width pass, zero console errors
+- [x] T021 [Taha] Ask mode: `question` without `answer` → generate via `MODEL_ANSWER` (status `generating`), then check
+- [x] T022 [Taha] Corrected answer: rewrite stage fills `corrected_answer` when any claim is outdated (mock: substitute current values)
+- [x] T023 [Taha] Claim cache in SQLite with TTL by volatility (high 6 h, medium 24 h, low 7 d); `cached` flag and `usage.cache_hits`
+- [x] T024 [Taha] `Dockerfile` (build frontend, serve from FastAPI) and `docker-compose.yml` (app + bifrost with `bifrost/config.json` reading provider keys from env); `docker compose up` works in mock mode with no keys
+- [x] T025 [Saadat] `app/smoke.py` (`python -m app.smoke`): one real Bifrost call and one real Tavily call, PASS/FAIL per integration with a clear hint; tests for T021–T023
+- [x] T026 [Alaa] UI: ask-mode toggle, corrected-answer panel with copy, export report (Markdown), cached indicator
+- [x] T027 [Alaa] UI polish: motion on score reveal, empty and no-claims states, sponsor roles named in the UI (sources "via Tavily", models "via Bifrost"), phone-width pass, zero console errors
 
 ## Phase 6 — Ship
 
