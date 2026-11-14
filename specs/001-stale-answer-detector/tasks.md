@@ -14,35 +14,35 @@ Inputs: [spec.md](spec.md), [plan.md](plan.md), [contracts/api.md](contracts/api
 
 ## Phase 1 — Repo setup
 
-- [ ] T001 [Esam] Root files: `.gitignore` additions, `.env.example` (every variable in plan.md "Config", placeholders only), `LICENSE` (MIT, "StaleGuard contributors"), `Makefile` (`dev-backend`, `dev-frontend`, `test`, `build`, `smoke`)
-- [ ] T002 [Esam] Community files: `CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/{bug_report.yml,feature_request.yml,config.yml}`, `.github/SUPPORT.md`, `CHANGELOG.md`
-- [ ] T003 [Esam] `.github/workflows/ci.yml`: backend (uv, ruff, pytest) and frontend (npm ci, lint, build) jobs, mock mode, no secrets
-- [ ] T004 [Esam] `README.md` top: H1, one-line description, one install/run command, `<!-- DEMO GIF -->` placeholder, short feature list
+- [x] T001 [Esam] Root files: `.gitignore` additions, `.env.example` (every variable in plan.md "Config", placeholders only), `LICENSE` (MIT, "StaleGuard contributors"), `Makefile` (`dev-backend`, `dev-frontend`, `test`, `build`, `smoke`)
+- [x] T002 [Esam] Community files: `CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/{bug_report.yml,feature_request.yml,config.yml}`, `.github/SUPPORT.md`, `CHANGELOG.md`
+- [x] T003 [Esam] `.github/workflows/ci.yml`: backend (uv, ruff, pytest) and frontend (npm ci, lint, build) jobs, mock mode, no secrets
+- [x] T004 [Esam] `README.md` top: H1, one-line description, one install/run command, `<!-- DEMO GIF -->` placeholder, short feature list
 
 ## Phase 2 — Backend core
 
-- [ ] T005 [Taha] `backend/pyproject.toml`, `app/main.py`, `app/config.py`; `GET /api/health`
-- [ ] T006 [Taha] `app/models.py` (contract shapes) and `app/store.py` (SQLite create/get/list/save)
-- [ ] T007 [Taha] `app/scoring.py`: `score_claim`, `label_for`, `overall_score`, `summarize` per plan formula
-- [ ] T008 [Taha] `app/llm.py`: `BifrostLLM` — per-stage model, `fallbacks`, optional virtual key, usage + served-by capture, JSON parse with one retry
-- [ ] T009 [Taha] `app/search.py`: `TavilySearch` — topic by category, published dates, maps results to `Evidence`
-- [ ] T010 [Taha] `app/pipeline.py`: `run_check` — extract → flag → search → judge → score, concurrent, persists progress, per-claim error isolation
-- [ ] T011 [Taha] Routes in `app/main.py`: `POST /api/checks` (+`wait`), `GET /api/checks`, `GET /api/checks/{id}`, `GET /api/samples`, input limits (FR-010), CORS for the Vite dev origin, serve `frontend/dist` when it exists
+- [x] T005 [Taha] `backend/pyproject.toml`, `app/main.py`, `app/config.py`; `GET /api/health`
+- [x] T006 [Taha] `app/models.py` (contract shapes) and `app/store.py` (SQLite create/get/list/save)
+- [x] T007 [Taha] `app/scoring.py`: `score_claim`, `label_for`, `overall_score`, `summarize` per plan formula
+- [x] T008 [Taha] `app/llm.py`: `BifrostLLM` — per-stage model, `fallbacks`, optional virtual key, usage + served-by capture, JSON parse with one retry
+- [x] T009 [Taha] `app/search.py`: `TavilySearch` — topic by category, published dates, maps results to `Evidence`
+- [x] T010 [Taha] `app/pipeline.py`: `run_check` — extract → flag → search → judge → score, concurrent, persists progress, per-claim error isolation
+- [x] T011 [Taha] Routes in `app/main.py`: `POST /api/checks` (+`wait`), `GET /api/checks`, `GET /api/checks/{id}`, `GET /api/samples`, input limits (FR-010), CORS for the Vite dev origin, serve `frontend/dist` when it exists
 
 ## Phase 3 — Agents, mocks, tests
 
-- [ ] T012 [Saadat] `app/prompts.py` (extract and judge prompts with JSON output spec) and `app/spans.py` (`locate`)
-- [ ] T013 [Saadat] `app/mock.py` (`MockLLM`, `MockSearch`) and `app/providers.py` (factory by `MOCK_MODE`)
-- [ ] T014 [Saadat] `app/fixtures/samples.json` (3 samples) and `app/fixtures/search.json` (fictional entities, example.com URLs)
-- [ ] T015 [Saadat] `backend/tests/`: scoring, spans, pipeline in mock mode (SC-001), API routes, `BifrostLLM` and `TavilySearch` against `httpx.MockTransport` (fallback parsing, error → claim error)
+- [x] T012 [Saadat] `app/prompts.py` (extract and judge prompts with JSON output spec) and `app/spans.py` (`locate`)
+- [x] T013 [Saadat] `app/mock.py` (`MockLLM`, `MockSearch`) and `app/providers.py` (factory by `MOCK_MODE`)
+- [x] T014 [Saadat] `app/fixtures/samples.json` (3 samples) and `app/fixtures/search.json` (fictional entities, example.com URLs)
+- [x] T015 [Saadat] `backend/tests/`: scoring, spans, pipeline in mock mode (SC-001), API routes, `BifrostLLM` and `TavilySearch` against `httpx.MockTransport` (fallback parsing, error → claim error)
 
 ## Phase 4 — Frontend
 
-- [ ] T016 [Alaa] Vite + React + TS scaffold in `frontend/`, `src/types.ts` (contract), `src/api.ts`, dev proxy `/api` → `:8000`, ESLint
-- [ ] T017 [Alaa] Input panel: answer textarea, sample chips, submit, validation; `useCheck` polling hook
-- [ ] T018 [Alaa] Result view: answer with highlighted claim spans by label, overall score ring, summary counts, progressive states
-- [ ] T019 [Alaa] Claim cards: category, score bar, verdict, current value, explanation, evidence links with date and stance, score breakdown; span ⇄ card linking
-- [ ] T020 [Alaa] History list, mode badge, model/usage strip (served-by, fallback, tokens, searches, duration), loading/empty/error states, responsive at 375 px, keyboard and screen-reader basics
+- [x] T016 [Alaa] Vite + React + TS scaffold in `frontend/`, `src/types.ts` (contract), `src/api.ts`, dev proxy `/api` → `:8000`, ESLint
+- [x] T017 [Alaa] Input panel: answer textarea, sample chips, submit, validation; `useCheck` polling hook
+- [x] T018 [Alaa] Result view: answer with highlighted claim spans by label, overall score ring, summary counts, progressive states
+- [x] T019 [Alaa] Claim cards: category, score bar, verdict, current value, explanation, evidence links with date and stance, score breakdown; span ⇄ card linking
+- [x] T020 [Alaa] History list, mode badge, model/usage strip (served-by, fallback, tokens, searches, duration), loading/empty/error states, responsive at 375 px, keyboard and screen-reader basics
 
 ## ───────── MVP CUT-LINE (everything above is the MVP) ─────────
 
