@@ -12,14 +12,18 @@ Optional, to write one PNG per page for a visual check (needs pymupdf):
 PDF route: the committed StaleGuard-pitch.pdf is exported by PowerPoint itself
 (COM, ppSaveAsPDF), so it is exactly the deck that opens in PowerPoint. When
 PowerPoint is not installed, or with --reportlab-pdf, the script falls back to
-drawing the PDF directly with reportlab. Pass --png to render whichever PDF was
-written. The reportlab twin is also written next to the temp files for comparison.
+drawing the PDF directly with reportlab.
+
+Look: the dark developer-tool theme of the product UI. The UI uses IBM Plex Sans
+and JetBrains Mono; neither ships with Windows or Office, so the deck uses Segoe UI
+and Consolas, which every Windows machine has. To switch, change FONTS and
+PPT_FACE below and point FONT_DIR at the new files.
 
 Slides are described once, as shapes, text and pictures in inches. The same
 description is written to PowerPoint (native, editable shapes) and, for the
 fallback, drawn into the PDF, so the two carry identical content. Text is measured
-with the real Georgia and Calibri files from the Windows font folder; the build
-stops if a text box would overflow. Edit the slide functions below and re-run.
+with the real font files from the Windows font folder; the build stops if a text
+box would overflow. Edit the slide functions below and re-run.
 """
 
 import argparse
@@ -48,31 +52,30 @@ W, H = 13.333, 7.5
 MX = 0.6  # side margin
 TOTAL = 9
 
-# Palette: the product's warm paper, near-black ink, deep teal; the four
-# semantic colours are used only for fresh / review / stale / unverified.
-PAPER = "F6F3EC"
-CARD = "FFFDF8"
-BORDER = "DDD5C6"
-INK = "1F1B16"
-MUTED = "5E574C"
-TEAL = "0E5A66"
-TEAL_DARK = "0A3F49"
-TEAL_PALE = "DCEBEC"
-GREEN, GREEN_BG = "1F7A4D", "D9EDDD"
-AMBER, AMBER_BG = "8A5A00", "FCEFC7"
-RED, RED_BG = "B3261E", "F9DCDA"
-SLATE, SLATE_BG = "4F5A70", "E2E5EC"
+# Palette: the product's dark theme. Neon green is the accent (black text on it);
+# the four semantic colours are used only for fresh / review / stale / unverified.
+BG = "0D0D0D"
+CARD = "161616"
+BORDER = "27272A"
+BORDER2 = "3F3F46"
+INK = "E4E4E7"
+MUTED = "A1A1AA"
+BLACK = "0D0D0D"
+GREEN, GREEN_BG = "39FF14", "10260C"
+AMBER, AMBER_BG = "FBBF24", "2A2210"
+RED, RED_BG = "F87171", "2E1A1B"
+SLATE, SLATE_BG = "94A3B8", "1E2430"
 
 FONT_DIR = Path("C:/Windows/Fonts")
 FONTS = {
-    ("sans", False, False): ("Calibri", "calibri.ttf"),
-    ("sans", True, False): ("Calibri-B", "calibrib.ttf"),
-    ("sans", False, True): ("Calibri-I", "calibrii.ttf"),
-    ("serif", False, False): ("Georgia", "georgia.ttf"),
-    ("serif", True, False): ("Georgia-B", "georgiab.ttf"),
-    ("serif", False, True): ("Georgia-I", "georgiai.ttf"),
+    ("sans", False, False): ("SegoeUI", "segoeui.ttf"),
+    ("sans", True, False): ("SegoeUI-B", "segoeuib.ttf"),
+    ("sans", False, True): ("SegoeUI-I", "segoeuii.ttf"),
+    ("mono", False, False): ("Consolas", "consola.ttf"),
+    ("mono", True, False): ("Consolas-B", "consolab.ttf"),
+    ("mono", False, True): ("Consolas-I", "consolai.ttf"),
 }
-PPT_FACE = {"sans": "Calibri", "serif": "Georgia"}
+PPT_FACE = {"sans": "Segoe UI", "mono": "Consolas"}
 LEADING = 1.2  # line height as a multiple of the font size, fixed in both outputs
 FIT_SLACK = 0.96  # wrap at 96% of the box width so PowerPoint never wraps earlier
 
@@ -90,7 +93,7 @@ def face(style):
 
 
 class Slide:
-    def __init__(self, bg=PAPER):
+    def __init__(self, bg=BG):
         self.bg = bg
         self.ops = []
         self.notes = ""
@@ -176,72 +179,71 @@ def check_fit(slide_no, op):
 
 
 def chrome(s, n, eyebrow, title):
-    s.text(MX, 0.42, 9, 0.3, [para(eyebrow.upper(), 13, TEAL, bold=True)])
-    s.text(MX, 0.74, W - 2 * MX, 0.7, [para(title, 32, INK, font="serif", bold=True)])
+    s.text(MX, 0.42, 9, 0.3, [para(eyebrow.upper(), 12, GREEN, font="mono", bold=True)])
+    s.text(MX, 0.74, W - 2 * MX, 0.7, [para(title, 32, INK, bold=True)])
     s.text(MX, 7.02, 8, 0.28, [para("StaleGuard  |  Global AI Hackathon 2026  |  PS06 Tavily + Bifrost", 11, MUTED)])
-    s.text(W - MX - 1.5, 7.02, 1.5, 0.28, [para(f"{n} / {TOTAL}", 11, MUTED, align="r")])
+    s.text(W - MX - 1.5, 7.02, 1.5, 0.28, [para(f"{n} / {TOTAL}", 11, MUTED, font="mono", align="r")])
 
 
 def card(s, x, y, w, h, fill=CARD, line=BORDER):
-    s.rect(x, y, w, h, fill=fill, line=line, lw=0.75, r=0.12)
+    s.rect(x, y, w, h, fill=fill, line=line, lw=1.0, r=0.1)
 
 
-def pill(s, x, y, w, h, label, fill, color, size=13, bold=True):
+def pill(s, x, y, w, h, label, fill, color, size=13, bold=True, font="sans"):
     s.rect(x, y, w, h, fill=fill, r=h / 2)
-    s.text(x, y, w, h, [para(label, size, color, bold=bold, align="c")], anchor="mid")
+    s.text(x, y, w, h, [para(label, size, color, font=font, bold=bold, align="c")], anchor="mid")
 
 
-def number_dot(s, x, y, d, n, fill=TEAL):
-    s.oval(x, y, d, d, fill)
-    s.text(x, y, d, d, [para(str(n), 16, "FFFFFF", font="serif", bold=True, align="c")], anchor="mid")
+def number_dot(s, x, y, d, n):
+    s.oval(x, y, d, d, GREEN)
+    s.text(x, y, d, d, [para(str(n), 16, BLACK, font="mono", bold=True, align="c")], anchor="mid")
 
 
 def caption(s, x, y, w, text, align="l"):
     s.text(x, y, w, 0.3, [para(text, 12, MUTED, italic=True, align=align)])
 
 
+def heading_body(s, x, y, w, h, head, body, anchor="top", hsize=18):
+    s.text(x, y, w, h, [para(head, hsize, INK, bold=True, after=6), para(body, 15, MUTED)], anchor=anchor)
+
+
 # ---------------------------------------------------------------------- slides
 
 
 def slide1():
-    s = Slide(bg=TEAL_DARK)
+    s = Slide(bg=BG)
     s.notes = (
         "StaleGuard catches outdated facts in AI answers before your users do. "
         "It is our entry for Global AI Hackathon 2026, problem statement PS06, built on Tavily for live search and Bifrost as the model gateway. "
-        "The cards on the right show the four labels every claim can get; the scores are from our mock-data sample runs."
+        "The screenshot is the landing page of the app, running in mock mode; the whole thing starts with one docker compose up."
     )
-    s.text(MX, 0.7, 8, 0.35, [para("GLOBAL AI HACKATHON 2026  |  PS06  |  TAVILY + BIFROST", 14, "9FC9CE", bold=True)])
-    s.text(MX, 1.7, 8, 1.4, [para("StaleGuard", 80, PAPER, font="serif", bold=True)])
-    s.text(MX, 3.35, 7.4, 1.5, [para("Catches outdated facts in AI answers before your users do.", 30, PAPER, font="serif")])
-    s.text(MX, 5.7, 7.6, 0.9, [
-        para("Team", 12, "9FC9CE", bold=True, after=3),
-        para("Esam Al-Areqi (team leader), Taha Thabit, Saadat Ahmed, Alaa Aldeen Alhakami", 16, PAPER),
+    s.text(MX, 0.7, 8, 0.35, [para("GLOBAL AI HACKATHON 2026  |  PS06", 13, MUTED, font="mono", bold=True)])
+    pill(s, MX, 1.3, 2.7, 0.4, "Tavily + Bifrost", CARD, MUTED, 13, False, font="mono")
+    s.text(MX, 1.95, 6.8, 2.3, [
+        para("Catch stale facts", 50, INK, bold=True),
+        para("in AI answers", 50, GREEN, bold=True),
     ])
-    rows = [
-        ("91", "Fresh", GREEN_BG, GREEN),
-        ("73", "Review", AMBER_BG, AMBER),
-        ("10", "Stale", RED_BG, RED),
-        ("43", "Unverified", SLATE_BG, SLATE),
-    ]
-    x, w, h = 9.0, 3.73, 0.95
-    for i, (num, label, bg, fg) in enumerate(rows):
-        y = 1.2 + i * 1.15
-        s.rect(x, y, w, h, fill=bg, r=0.14)
-        s.text(x + 0.3, y, 1.2, h, [para(num, 40, fg, font="serif", bold=True)], anchor="mid")
-        s.text(x + 1.6, y, w - 1.8, h, [para(label, 22, fg, bold=True)], anchor="mid")
-    s.text(x, 5.85, w, 0.5, [para("Scores from mock-mode sample runs on fictional companies.", 12, "9FC9CE", italic=True)])
+    s.text(MX, 4.2, 6.5, 1.0, [para("Catches outdated facts in AI answers before your users do.", 20, MUTED)])
+    s.rect(MX, 5.15, 3.5, 0.6, fill=CARD, line=BORDER, lw=1.0, r=0.1)
+    s.text(MX + 0.25, 5.15, 3.2, 0.6, [runs([("$ ", dict(color=MUTED, font="mono")), ("docker compose up", dict(font="mono", bold=True))], 18)], anchor="mid")
+    s.text(MX, 6.1, 7.0, 0.8, [
+        para("TEAM", 11, MUTED, font="mono", bold=True, after=3),
+        para("Esam Al-Areqi (team leader), Taha Thabit, Saadat Ahmed, Alaa Aldeen Alhakami", 14, INK),
+    ])
+    iw, ih = s.image(MEDIA / "screenshot-landing.png", 7.6, 1.5, w=W - MX - 7.6)
+    caption(s, 7.6, 1.5 + ih + 0.1, iw, "The app's landing page. Mock data.")
     return s
 
 
 def slide2():
-    s = Slide()
+    s = Slide(bg=BG)
     s.notes = (
         "A model answers from what it learned, and it states old facts in the same confident tone as new ones. "
         "The three examples are illustrative: fictional companies from our bundled mock data, each with the value the mock sources give now. "
         "The people hurt are the ones who ship these answers to customers: support bots, docs assistants and sales answers."
     )
     chrome(s, 2, "The problem", "Models state old facts with full confidence")
-    s.text(MX, 1.4, 11, 0.4, [para("Prices, versions, laws and job titles change. The answer does not.", 20, MUTED, font="serif", italic=True)])
+    s.text(MX, 1.4, 11, 0.4, [para("Prices, versions, laws and job titles change. The answer does not.", 18, MUTED)])
     examples = [
         ("Pricing", "The Pro plan costs $20 per month per user.", "$25 per user per month since September 2026"),
         ("Version", "The latest stable release of the Lumen API is version 3.2.", "Version 4.0, released September 2026"),
@@ -251,22 +253,23 @@ def slide2():
     for i, (tag, claim, now) in enumerate(examples):
         x = MX + i * (cw + gap)
         card(s, x, 2.05, cw, 3.45)
-        pill(s, x + 0.25, 2.3, 1.25, 0.34, tag, TEAL_PALE, TEAL, 13)
-        s.text(x + 0.25, 2.85, cw - 0.5, 1.3, [para(claim, 21, INK, font="serif")])
+        pill(s, x + 0.25, 2.3, 1.35, 0.34, tag, BORDER, INK, 12, True, font="mono")
+        s.text(x + 0.25, 2.85, cw - 0.5, 1.3, [para(claim, 19, INK)])
         s.rect(x + 0.25, 4.3, cw - 0.5, 0.95, fill=RED_BG, r=0.08)
         s.text(x + 0.4, 4.36, cw - 0.8, 0.85, [
-            para("NOW, PER MOCK SOURCES", 11, RED, bold=True, after=2),
-            para(now, 15, INK),
+            para("NOW, PER MOCK SOURCES", 11, RED, font="mono", bold=True, after=2),
+            para(now, 14, INK),
         ], anchor="mid")
     s.text(MX, 5.85, 1.5, 0.4, [para("Who is hurt", 15, INK, bold=True)], anchor="mid")
     for i, label in enumerate(["Support bots", "Docs assistants", "Sales answers"]):
-        pill(s, 2.2 + i * 2.3, 5.85, 2.1, 0.4, label, TEAL_PALE, TEAL, 15)
+        pill(s, 2.25 + i * 2.35, 5.85, 2.2, 0.4, label, CARD, GREEN, 14, True)
+        s.rect(2.25 + i * 2.35, 5.85, 2.2, 0.4, line=BORDER2, lw=1.0, r=0.2)
     caption(s, MX, 6.5, 12, "Illustrative examples from the bundled mock data (fictional companies), not real claims.")
     return s
 
 
 def slide3():
-    s = Slide()
+    s = Slide(bg=BG)
     s.notes = (
         "You paste an answer or type a question. StaleGuard finds each claim that can go stale, searches the live web for it and judges what the sources say. "
         "Each claim gets a score from 0 to 100, its sources and, when it is outdated, the current value. "
@@ -274,21 +277,21 @@ def slide3():
     )
     chrome(s, 3, "The solution", "Every time-sensitive claim, re-checked live")
     steps = [
-        ("Paste an answer, or ask a question.", None),
-        ("Every time-sensitive claim is found and searched on the live web.", None),
-        ("Each gets a 0 to 100 score, its sources and the current value.", None),
+        "Paste an answer, or ask a question.",
+        "Every time-sensitive claim is found and searched on the live web.",
+        "Each gets a 0 to 100 score, its sources and the current value.",
     ]
-    for i, (t, _) in enumerate(steps):
+    for i, t in enumerate(steps):
         y = 1.95 + i * 1.5
         number_dot(s, MX, y, 0.55, i + 1)
-        s.text(MX + 0.8, y - 0.05, 4.2, 1.2, [para(t, 20, INK)])
+        s.text(MX + 0.8, y - 0.05, 4.2, 1.2, [para(t, 19, INK)])
     iw, ih = s.image(MEDIA / "screenshot-report.png", 5.9, 1.75, w=W - MX - 5.9)
     caption(s, 5.9, 1.75 + ih + 0.1, iw, "Freshness report on a fictional company. Mock data.")
     return s
 
 
 def slide4():
-    s = Slide()
+    s = Slide(bg=BG)
     s.notes = (
         "A check runs left to right. Two steps are model calls through Bifrost: extract the claims and judge the evidence. "
         "Search is Tavily. Flagging and scoring are plain code, so the number is never a model's opinion. "
@@ -301,25 +304,25 @@ def slide4():
         ("Flag|time-sensitive", "Plain code", "code"),
         ("Search", "Tavily, live web", "search"),
         ("Judge evidence", "LLM via Bifrost", "model"),
-        ("Deterministic score", "Plain code", "code"),
+        ("Deterministic|score", "Plain code", "code"),
         ("Report", "Scores and sources", "end"),
     ]
     bw, gap, y, bh = 1.55, 0.21, 2.0, 1.55
     for i, (name, sub, kind) in enumerate(steps):
         x = MX + i * (bw + gap)
         if kind == "model":
-            s.rect(x, y, bw, bh, fill=TEAL, r=0.12)
-            c1, c2 = "FFFFFF", "BFE0E3"
+            s.rect(x, y, bw, bh, fill=GREEN, r=0.12)
+            c1, c2 = BLACK, "14330C"
         elif kind == "search":
-            s.rect(x, y, bw, bh, fill=TEAL_PALE, line=TEAL, lw=1.5, r=0.12)
-            c1, c2 = TEAL_DARK, TEAL
+            s.rect(x, y, bw, bh, fill=CARD, line=GREEN, lw=2.0, r=0.12)
+            c1, c2 = GREEN, MUTED
         elif kind == "code":
-            s.rect(x, y, bw, bh, fill=CARD, line=INK, lw=1.25, r=0.12)
+            s.rect(x, y, bw, bh, fill=CARD, line=BORDER2, lw=1.25, r=0.12)
             c1, c2 = INK, MUTED
         else:
-            s.rect(x, y, bw, bh, fill=PAPER, line=BORDER, lw=1.0, r=0.12)
+            s.rect(x, y, bw, bh, fill=BG, line=BORDER, lw=1.0, r=0.12)
             c1, c2 = INK, MUTED
-        s.text(x + 0.1, y + 0.1, bw - 0.2, bh - 0.2, [
+        s.text(x + 0.08, y + 0.1, bw - 0.16, bh - 0.2, [
             *[para(part, 14, c1, bold=True, after=4 if j == name.count("|") else 0, align="c") for j, part in enumerate(name.split("|"))],
             para(sub, 12, c2, align="c"),
         ], anchor="mid")
@@ -327,14 +330,14 @@ def slide4():
             s.arrow(x + bw + 0.03, y + bh / 2 - 0.12, gap - 0.06, 0.24, "right", MUTED)
     ly = 3.95
     legend = [
-        (TEAL, None, "Model call through the Bifrost gateway"),
-        (TEAL_PALE, TEAL, "Web search through Tavily"),
-        (CARD, INK, "Plain code, no model"),
+        (GREEN, None, "Model call through the Bifrost gateway"),
+        (CARD, GREEN, "Web search through Tavily"),
+        (CARD, BORDER2, "Plain code, no model"),
     ]
     lx = MX
     for fill, line, label in legend:
-        s.rect(lx, ly + 0.04, 0.32, 0.22, fill=fill, line=line, lw=1.25, r=0.05)
-        s.text(lx + 0.42, ly, 3.3, 0.3, [para(label, 14, INK)], anchor="mid")
+        s.rect(lx, ly + 0.04, 0.32, 0.22, fill=fill, line=line, lw=1.5, r=0.05)
+        s.text(lx + 0.42, ly, 3.4, 0.3, [para(label, 13, INK)], anchor="mid")
         lx += 4.05
     notes = [
         ("Four at a time", "Up to four claims are verified at the same time."),
@@ -345,66 +348,62 @@ def slide4():
     for i, (h1, body) in enumerate(notes):
         x = MX + i * (cw + 0.2)
         card(s, x, 4.65, cw, 1.7)
-        s.text(x + 0.25, 4.85, cw - 0.5, 1.4, [
-            para(h1, 18, INK, font="serif", bold=True, after=6),
-            para(body, 15, MUTED),
-        ])
+        heading_body(s, x + 0.25, 4.85, cw - 0.5, 1.4, h1, body)
     return s
 
 
 def slide5():
-    s = Slide()
+    s = Slide(bg=BG)
     s.notes = (
         "Every model call goes through one Bifrost endpoint, so the app never holds a provider key. "
-        "A cheap model extracts claims, a stronger one judges evidence, and changing either is an environment change. "
-        "If a call fails over to a fallback model, the UI shows which model actually served it, together with tokens and latency for each call."
+        "Extract, judge and rewrite run on an open-weight model on Groq; ask-mode answers come from xAI Grok, a different vendor, so StaleGuard checks a model it did not use to judge, and Grok is also the failover. "
+        "The app has its own virtual key with a 5 USD daily budget, 60 requests per minute and an allowed-model list, enforced by the gateway. "
+        "The UI strip shows which model served each stage, tagged as fallback when Grok stepped in."
     )
     chrome(s, 5, "What Bifrost contributes", "One gateway for every model call")
-    # left: small architecture diagram
     bx, bw = MX, 4.2
-    s.rect(bx, 1.85, bw, 0.9, fill=CARD, line=BORDER, r=0.12)
+    s.rect(bx, 1.85, bw, 0.9, fill=CARD, line=BORDER, lw=1.0, r=0.1)
     s.text(bx, 1.85, bw, 0.9, [
-        para("StaleGuard app", 18, INK, bold=True, align="c"),
+        para("StaleGuard app", 17, INK, bold=True, align="c"),
         para("holds no provider key", 13, MUTED, align="c"),
     ], anchor="mid")
     s.arrow(bx + bw / 2 - 0.15, 2.82, 0.3, 0.4, "down", MUTED)
-    s.rect(bx, 3.3, bw, 0.95, fill=TEAL, r=0.12)
+    s.rect(bx, 3.3, bw, 0.95, fill=GREEN, r=0.1)
     s.text(bx, 3.3, bw, 0.95, [
-        para("Bifrost gateway", 20, "FFFFFF", font="serif", bold=True, align="c"),
-        para("one OpenAI-compatible endpoint", 13, "BFE0E3", align="c"),
+        para("Bifrost gateway", 19, BLACK, bold=True, align="c"),
+        para("one endpoint, every model", 13, "14330C", align="c"),
     ], anchor="mid")
     s.arrow(bx + bw / 4 - 0.15, 4.32, 0.3, 0.4, "down", MUTED)
     s.arrow(bx + 3 * bw / 4 - 0.15, 4.32, 0.3, 0.4, "down", MUTED)
     pw = 2.0
-    s.rect(bx, 4.8, pw, 0.8, fill=CARD, line=BORDER, r=0.1)
-    s.text(bx, 4.8, pw, 0.8, [para("OpenAI", 17, INK, bold=True, align="c")], anchor="mid")
-    s.rect(bx + bw - pw, 4.8, pw, 0.8, fill=CARD, line=BORDER, r=0.1)
-    s.text(bx + bw - pw, 4.8, pw, 0.8, [
-        para("Anthropic", 17, INK, bold=True, align="c"),
-        para("failover", 12, MUTED, italic=True, align="c"),
+    s.rect(bx, 4.8, pw, 0.95, fill=CARD, line=BORDER, lw=1.0, r=0.1)
+    s.text(bx, 4.8, pw, 0.95, [
+        para("Groq", 17, INK, bold=True, align="c"),
+        para("gpt-oss-120b", 12, GREEN, font="mono", align="c"),
     ], anchor="mid")
-    # right: 2x2 cards
+    s.rect(bx + bw - pw, 4.8, pw, 0.95, fill=CARD, line=BORDER, lw=1.0, r=0.1)
+    s.text(bx + bw - pw, 4.8, pw, 0.95, [
+        para("xAI", 17, INK, bold=True, align="c"),
+        para("grok-4.7, failover", 12, GREEN, font="mono", align="c"),
+    ], anchor="mid")
     items = [
-        ("Per-stage routing", "A cheap model extracts claims, a stronger one judges. Changing a model is an env change."),
-        ("Automatic failover", "Fallback models are set per request. The UI shows which model served each call."),
-        ("Virtual keys", "The gateway applies budgets and rate limits per app through a virtual key."),
-        ("Usage per stage", "Tokens, latency and serving model for every call, in the app and in Bifrost."),
+        ("Per-stage routing", "Groq runs extract, judge and rewrite. xAI Grok answers in ask mode. A model change is an env change."),
+        ("Automatic failover", "Grok is the fallback if Groq fails. The UI tags a fallback call with the model that served it."),
+        ("Virtual key", "The app's own key: 5 USD a day, 60 requests a minute, allowed models only. The gateway enforces it."),
+        ("Usage per stage", "Model and total tokens in the app, per-call tokens and latency in the API response."),
     ]
-    cw, ch, gx, gy = 3.6, 2.0, 0.25, 0.25
+    cw, ch, gx, gy = 3.6, 2.2, 0.25, 0.25
     x0, y0 = W - MX - 2 * cw - gx, 1.85
     for i, (h1, body) in enumerate(items):
         x = x0 + (i % 2) * (cw + gx)
         y = y0 + (i // 2) * (ch + gy)
         card(s, x, y, cw, ch)
-        s.text(x + 0.25, y + 0.2, cw - 0.5, ch - 0.35, [
-            para(h1, 18, INK, font="serif", bold=True, after=6),
-            para(body, 15, MUTED),
-        ])
+        heading_body(s, x + 0.25, y + 0.2, cw - 0.5, ch - 0.35, h1, body)
     return s
 
 
 def slide6(claim_crop):
-    s = Slide()
+    s = Slide(bg=BG)
     s.notes = (
         "Tavily is where the evidence comes from. Each flagged claim gets one search, and the judge reads up to five ranked results with their dates and snippets. "
         "Leadership and company-fact claims use Tavily's news topic; everything else uses general search. "
@@ -413,17 +412,17 @@ def slide6(claim_crop):
     chrome(s, 6, "What Tavily contributes", "Live evidence for every flagged claim")
     items = [
         ("One search per claim", "Each flagged claim is searched on the live web, up to five results."),
-        ("Ranked sources", "Every source comes with title, URL, snippet, relevance and publication date."),
+        ("Ranked sources", "Every source has a title, URL, snippet, relevance and publication date."),
         ("Topic routing by claim type", "News topic for leadership and company facts, general search for the rest."),
         ("Recency feeds the score", "Source dates set the recency input. A source with no date counts as neutral."),
     ]
-    cw, ch, gap = 7.6, 1.1, 0.15
+    cw, ch, gap = 7.2, 1.1, 0.15
     for i, (h1, body) in enumerate(items):
         y = 1.75 + i * (ch + gap)
         card(s, MX, y, cw, ch)
-        s.text(MX + 0.3, y + 0.1, cw - 0.6, ch - 0.2, [
-            para(h1, 18, INK, font="serif", bold=True, after=3),
-            para(body, 15, MUTED),
+        s.text(MX + 0.3, y + 0.08, cw - 0.6, ch - 0.16, [
+            para(h1, 17, INK, bold=True, after=3),
+            para(body, 14, MUTED),
         ], anchor="mid")
     ih = 4.75
     iw = ih * Image.open(claim_crop).size[0] / Image.open(claim_crop).size[1]
@@ -434,14 +433,13 @@ def slide6(claim_crop):
 
 
 def slide7():
-    s = Slide()
+    s = Slide(bg=BG)
     s.notes = (
         "The score is computed in code, not by a model. The model only gives a verdict, a confidence and a stance per source. "
         "Current claims land between 65 and 100, outdated between 0 and 35, and unverified between 35 and 50. "
         "In the worked example, from a mock-mode run, the Pro plan claim is outdated with confidence 0.9, so quality is 0.71 and the score is 10. Same inputs always give the same score."
     )
     chrome(s, 7, "The freshness score", "Deterministic score, every input visible")
-    # score scale
     sx, sw = MX, 6.9
     bars = [
         ("Current", "Sources back the claim", 65, 100, GREEN),
@@ -450,67 +448,66 @@ def slide7():
     ]
     for i, (name, sub, lo, hi, color) in enumerate(bars):
         y = 1.75 + i * 0.95
-        s.text(sx, y, sw, 0.3, [runs([(name, dict(bold=True, color=color)), ("   " + sub, dict(color=MUTED))], 15)])
+        s.text(sx, y, sw, 0.3, [runs([(name, dict(bold=True, color=color)), ("   " + sub, dict(color=MUTED))], 14)])
         s.rect(sx, y + 0.38, sw, 0.3, fill=BORDER, r=0.06)
         bx = sx + sw * lo / 100
         bw = sw * (hi - lo) / 100
         s.rect(bx, y + 0.38, bw, 0.3, fill=color, r=0.06)
-        s.text(bx, y + 0.38, bw, 0.3, [para(f"{lo} to {hi}", 12, "FFFFFF", bold=True, align="c")], anchor="mid")
+        s.text(bx, y + 0.38, bw, 0.3, [para(f"{lo} to {hi}", 12, BLACK, font="mono", bold=True, align="c")], anchor="mid")
     s.text(sx, 4.62, sw, 0.3, [para("Labels: stale below 40, review 40 to 74, fresh 75 and up.", 13, MUTED)])
-    card(s, sx, 5.05, sw, 1.75, fill=CARD)
+    card(s, sx, 5.05, sw, 1.75)
     s.text(sx + 0.3, 5.15, sw - 0.6, 1.6, [
-        para("quality = confidence x (half recency + half agreement)", 17, TEAL, font="serif", italic=True, after=6),
-        runs([("Recency: ", dict(bold=True)), ("how new the sources are, scaled by how fast that kind of fact changes.", {})], 14, after=3),
+        para("quality = confidence x (recency + agreement) / 2", 15, GREEN, font="mono", after=6),
+        runs([("Recency: ", dict(bold=True)), ("how new the sources are, scaled by how fast that fact type changes.", {})], 14, after=3),
         runs([("Agreement: ", dict(bold=True)), ("the share of sources that back the verdict.", {})], 14),
     ], anchor="mid")
-    # worked example
     ex, ew = 7.95, W - MX - 7.95
     card(s, ex, 1.75, ew, 5.05)
-    s.text(ex + 0.3, 1.9, ew - 0.6, 0.3, [para("WORKED EXAMPLE, MOCK DATA", 12, TEAL, bold=True)])
-    s.text(ex + 0.3, 2.25, ew - 0.6, 0.9, [para("The Pro plan costs $20 per month per user and includes unlimited projects.", 15, INK, font="serif", italic=True)])
+    s.text(ex + 0.3, 1.9, ew - 0.6, 0.3, [para("WORKED EXAMPLE, MOCK DATA", 12, GREEN, font="mono", bold=True)])
+    s.text(ex + 0.3, 2.25, ew - 0.6, 0.9, [para("The Pro plan costs $20 per month per user and includes unlimited projects.", 14, INK, italic=True)])
     rows = [("Verdict", "outdated"), ("Confidence", "0.90"), ("Recency", "0.57"), ("Agreement", "1.00"), ("Quality", "0.71")]
     for i, (k, v) in enumerate(rows):
         y = 3.3 + i * 0.36
-        s.text(ex + 0.3, y, 2.2, 0.32, [para(k, 15, MUTED)], anchor="mid")
-        s.text(ex + 2.5, y, 1.8, 0.32, [para(v, 15, INK, bold=True)], anchor="mid")
+        s.text(ex + 0.3, y, 2.2, 0.32, [para(k, 14, MUTED)], anchor="mid")
+        s.text(ex + 2.5, y, 1.8, 0.32, [para(v, 14, INK, font="mono", bold=True)], anchor="mid")
     s.rect(ex + 0.3, 5.2, ew - 0.6, 1.35, fill=RED_BG, r=0.1)
-    s.text(ex + 0.5, 5.2, 1.5, 1.35, [para("10", 56, RED, font="serif", bold=True)], anchor="mid")
+    s.text(ex + 0.5, 5.2, 1.5, 1.35, [para("10", 52, RED, font="mono", bold=True)], anchor="mid")
     s.text(ex + 2.0, 5.2, ew - 2.4, 1.35, [
         para("Stale", 20, RED, bold=True, after=2),
-        para("35 x (1 - 0.71) = 10", 14, INK),
+        para("35 x (1 - 0.71) = 10", 13, INK, font="mono"),
     ], anchor="mid")
     return s
 
 
 def slide8():
-    s = Slide()
+    s = Slide(bg=BG)
     s.notes = (
         "The prototype runs with one command and needs no keys: mock mode uses bundled fictional fixtures and makes no network calls. "
-        "The backend has 72 tests and CI is green on three jobs: backend, frontend and docker. Other tools can call the JSON API as a verification layer. "
-        "To be straight about it: live mode with real Bifrost and Tavily keys is wired and tested against mocked transports, but the first real run, make smoke, has not happened yet."
+        "The backend has 76 tests and CI is green on three jobs: backend, frontend and docker. Other tools can call the JSON API as a verification layer. "
+        "To be straight about it: live mode with real Groq, xAI and Tavily keys is wired and tested against mocked transports, but the first real run, make smoke, has not happened yet."
     )
     chrome(s, 8, "Working prototype", "A working prototype that runs in one command")
     items = [
-        ("One command", "docker compose up"),
-        ("Mock mode", "No keys, no network calls"),
-        ("Tested", "72 backend tests; CI green on backend, frontend and docker"),
-        ("A verification layer", "POST /api/checks?wait=true returns the JSON report"),
+        ("One command", "$ docker compose up", True),
+        ("Mock mode", "No keys, no network calls", False),
+        ("Tested", "76 backend tests; CI green on backend, frontend and docker", False),
+        ("A verification layer", "POST /api/checks?wait=true returns the JSON report", False),
     ]
-    for i, (h1, body) in enumerate(items):
+    for i, (h1, body, mono) in enumerate(items):
         y = 1.8 + i * 1.2
-        s.oval(MX, y + 0.08, 0.2, 0.2, TEAL)
-        s.text(MX + 0.4, y, 3.55, 1.1, [
-            para(h1, 18, INK, bold=True, after=2),
-            para(body, 15, MUTED),
+        s.oval(MX, y + 0.08, 0.2, 0.2, GREEN)
+        s.text(MX + 0.4, y, 3.6, 1.1, [
+            para(h1, 17, INK, bold=True, after=2),
+            para(body, 13 if mono else 14, GREEN if mono else MUTED, font="mono" if mono else "sans"),
         ])
-    ax = 4.85
-    aw, ah = s.image(MEDIA / "screenshot-ask.png", ax, 1.8, w=5.3)
+    ax = 4.95
+    aw, ah = s.image(MEDIA / "screenshot-ask.png", ax, 1.8, w=5.2)
     caption(s, ax, 1.8 + ah + 0.08, aw, "Ask mode on a fictional API. Mock data.")
-    ny = 1.8 + ah + 0.55
-    s.rect(ax, ny, aw, 6.8 - ny, fill=AMBER_BG, r=0.1)
+    ny = 1.8 + ah + 0.5
+    s.rect(ax, ny, aw, 6.8 - ny, fill=AMBER_BG, line=AMBER, lw=1.0, r=0.1)
     s.text(ax + 0.2, ny, aw - 0.4, 6.8 - ny, [
         runs([("Live path not run yet. ", dict(bold=True, color=AMBER)),
-              ("Real Bifrost and Tavily calls are tested against mocked transports; the first run with keys is make smoke.", {})], 14),
+              ("No real Groq, xAI or Tavily call has been made; the first run with keys is make smoke.", {})], 13),
     ], anchor="mid")
     mh = 4.85
     mw = mh * 750 / 1624
@@ -521,7 +518,7 @@ def slide8():
 
 
 def slide9():
-    s = Slide()
+    s = Slide(bg=BG)
     s.notes = (
         "Next we want the model to call Tavily itself as a tool through Bifrost's MCP gateway, instead of the fixed search-then-judge order. "
         "After that, a streaming proxy that annotates answers in place, and scheduled re-checks of saved answers. "
@@ -538,13 +535,13 @@ def slide9():
         y = 1.8 + i * 1.5
         number_dot(s, MX, y + 0.05, 0.55, i + 1)
         s.text(MX + 0.8, y, 4.6, 1.3, [
-            para(h1, 20, INK, font="serif", bold=True, after=4),
-            para(body, 15, MUTED),
+            para(h1, 19, INK, bold=True, after=4),
+            para(body, 14, MUTED),
         ])
     tx, tw = 6.7, W - MX - 6.7
     c1 = 2.3
-    s.text(tx, 1.75, c1, 0.35, [para("MEMBER", 12, TEAL, bold=True)], anchor="mid")
-    s.text(tx + c1, 1.75, tw - c1, 0.35, [para("AREA", 12, TEAL, bold=True)], anchor="mid")
+    s.text(tx, 1.75, c1, 0.35, [para("MEMBER", 12, GREEN, font="mono", bold=True)], anchor="mid")
+    s.text(tx + c1, 1.75, tw - c1, 0.35, [para("AREA", 12, GREEN, font="mono", bold=True)], anchor="mid")
     team = [
         ("Esam Al-Areqi", "team leader", "Repo setup, CI, README, docs, pitch deck, demo"),
         ("Taha Thabit", None, "Core engine and backend, Bifrost and Tavily integration, Docker"),
@@ -555,17 +552,17 @@ def slide9():
     for i, (name, role, area) in enumerate(team):
         y = 2.15 + i * rh
         card(s, tx, y, tw, rh - 0.1)
-        nm = [para(name, 16, INK, bold=True)]
+        nm = [para(name, 15, INK, bold=True)]
         if role:
-            nm.append(para(role, 13, MUTED, italic=True))
+            nm.append(para(role, 12, MUTED, italic=True))
         s.text(tx + 0.2, y, c1 - 0.3, rh - 0.1, nm, anchor="mid")
-        s.text(tx + c1, y, tw - c1 - 0.2, rh - 0.1, [para(area, 14, INK)], anchor="mid")
+        s.text(tx + c1, y, tw - c1 - 0.2, rh - 0.1, [para(area, 13, INK)], anchor="mid")
     s.text(tx, 6.0, tw, 0.42, [
         para("Planned, written and reviewed with AI coding tools (Claude Code); full disclosure in the README.", 12, MUTED, italic=True),
     ])
-    s.rect(MX, 6.5, W - 2 * MX, 0.45, fill=TEAL_PALE, r=0.1)
+    s.rect(MX, 6.5, W - 2 * MX, 0.45, fill=CARD, line=BORDER, lw=1.0, r=0.1)
     s.text(MX + 0.25, 6.5, W - 2 * MX - 0.5, 0.45, [
-        runs([("Repo  ", dict(bold=True, color=TEAL)), ("https://github.com/6rzan/ai-global-hackathon", dict(color=INK))], 16),
+        runs([("Repo  ", dict(bold=True, color=GREEN, font="mono")), ("https://github.com/6rzan/ai-global-hackathon", dict(font="mono"))], 15),
     ], anchor="mid")
     return s
 
@@ -774,7 +771,7 @@ def main():
     tmp = Path(tempfile.mkdtemp(prefix="staleguard-deck-"))
     # Crop the claim card out of the full screenshot; the original file is untouched.
     claim_crop = tmp / "claim-card.png"
-    Image.open(MEDIA / "screenshot-claim.png").crop((205, 0, 835, 790)).save(claim_crop)
+    Image.open(MEDIA / "screenshot-claim.png").crop((148, 56, 858, 800)).save(claim_crop)
 
     slides = [slide1(), slide2(), slide3(), slide4(), slide5(), slide6(claim_crop), slide7(), slide8(), slide9()]
     assert len(slides) == TOTAL
