@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Check } from "../types";
 import { AnswerView } from "./AnswerView";
 import { ClaimCard } from "./ClaimCard";
+import { CorrectedAnswer } from "./CorrectedAnswer";
 import { ResultSummary } from "./ResultSummary";
 import { UsageStrip } from "./UsageStrip";
 
@@ -22,8 +23,15 @@ export function Result({ check }: { check: Check }) {
   return (
     <div className="result">
       <ResultSummary check={check} />
-      {check.answer && (
+      {(check.answer || check.status === "generating") && (
         <AnswerView check={check} activeId={activeId} onActive={setActiveId} onOpen={openCard} />
+      )}
+      {check.corrected_answer && (
+        <div className="reveal">
+          <div>
+            <CorrectedAnswer original={check.answer} corrected={check.corrected_answer} />
+          </div>
+        </div>
       )}
       {claims.length > 0 && (
         <section aria-labelledby="claims-title">
@@ -32,13 +40,17 @@ export function Result({ check }: { check: Check }) {
           </h2>
           <ol className="claim-list">
             {claims.map((c, i) => (
-              <ClaimCard key={c.id} claim={c} index={i + 1} active={activeId === c.id} onActive={setActiveId} />
+              <ClaimCard
+                key={c.id}
+                claim={c}
+                mode={check.mode}
+                index={i + 1}
+                active={activeId === c.id}
+                onActive={setActiveId}
+              />
             ))}
           </ol>
         </section>
-      )}
-      {finished && claims.length === 0 && (
-        <p className="card muted">No factual claims were found in this answer.</p>
       )}
       {(finished || check.model_calls.length > 0) && <UsageStrip check={check} />}
     </div>

@@ -14,6 +14,7 @@ const LEGEND = ["fresh", "review", "stale", "unverified"] as const;
 
 export function AnswerView({ check, activeId, onActive, onOpen }: Props) {
   const { answer } = check;
+  const generating = answer === "" && check.status === "generating";
   // Claims never overlap; the guard only protects the render from bad data.
   const claims = [...check.claims].sort((a, b) => a.start - b.start);
   const nodes: ReactNode[] = [];
@@ -24,6 +25,9 @@ export function AnswerView({ check, activeId, onActive, onOpen }: Props) {
     if (c.start > cursor) nodes.push(answer.slice(cursor, c.start));
     const tone = claimTone(c);
     const index = claims.indexOf(c) + 1;
+    // Keep the tag on the span's last word so it never wraps onto a line alone.
+    const text = answer.slice(c.start, c.end);
+    const split = Math.max(0, text.search(/\S+$/));
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -47,10 +51,13 @@ export function AnswerView({ check, activeId, onActive, onOpen }: Props) {
         onFocus={() => onActive(c.id)}
         onBlur={() => onActive(null)}
       >
-        {answer.slice(c.start, c.end)}
-        <span className="claim-tag" aria-hidden="true">
-          {c.label ? <Icon name={c.label} /> : c.status === "skipped" ? null : <i className="dot" />}
-          {index}
+        {text.slice(0, split)}
+        <span className="nowrap">
+          {text.slice(split)}
+          <span className="claim-tag" aria-hidden="true">
+            {c.label ? <Icon name={c.label} /> : c.status === "skipped" ? null : <i className="dot" />}
+            {index}
+          </span>
         </span>
       </span>,
     );
@@ -58,8 +65,30 @@ export function AnswerView({ check, activeId, onActive, onOpen }: Props) {
   }
   if (cursor < answer.length) nodes.push(answer.slice(cursor));
 
+  const question = check.question && (
+    <p className="question">
+      <span>Question</span> {check.question}
+    </p>
+  );
+
+  if (generating) {
+    return (
+      <section className="card answer-card" aria-labelledby="answer-title">
+        <h2 id="answer-title" className="sr-only">
+          The answer
+        </h2>
+        {question}
+        <p className="loading" role="status">
+          <span className="spinner" aria-hidden="true" />
+          Generating an answer through the gateway…
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="card answer-card" aria-labelledby="answer-title">
+      {question}
       <div className="answer-head">
         <h2 id="answer-title">The answer</h2>
         <ul className="legend" aria-label="Highlight colours">

@@ -58,7 +58,7 @@ export function statusLine(check: Check): string {
     case "queued":
       return "Queued…";
     case "generating":
-      return "Generating the answer…";
+      return "Generating an answer through the gateway…";
     case "extracting":
       return "Extracting claims…";
     case "verifying": {

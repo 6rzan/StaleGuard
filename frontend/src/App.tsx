@@ -72,7 +72,7 @@ export default function App() {
         )}
         <div className="layout">
           <main id="main" className="main">
-            <InputCard samples={samples} running={running} onSubmit={(answer) => void submit(answer)} />
+            <InputCard samples={samples} running={running} onSubmit={(req) => void submit(req)} />
             <div ref={resultRef} className="result-slot">
               {error && <ErrorNotice title="Something went wrong" message={error} onRetry={canRetry ? retry : null} />}
               {check ? (
