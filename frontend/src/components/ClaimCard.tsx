@@ -1,10 +1,11 @@
 import { CATEGORY_TEXT, LABEL_TEXT, claimStateWord, claimTone, percent, skippedReason } from "../format";
-import type { Claim, ScoreBreakdown, Verdict } from "../types";
+import type { Check, Claim, ScoreBreakdown, Verdict } from "../types";
 import { EvidenceList } from "./EvidenceList";
 import { Icon } from "./Icon";
 
 type Props = {
   claim: Claim;
+  mode: Check["mode"];
   index: number;
   active: boolean;
   onActive: (id: string | null) => void;
@@ -49,7 +50,7 @@ function Breakdown({ b }: { b: ScoreBreakdown }) {
   );
 }
 
-export function ClaimCard({ claim: c, index, active, onActive }: Props) {
+export function ClaimCard({ claim: c, mode, index, active, onActive }: Props) {
   const id = `claim-${c.id}`;
   const common = {
     id,
@@ -83,43 +84,16 @@ export function ClaimCard({ claim: c, index, active, onActive }: Props) {
       <div className="claim-tags">
         <span className="tag">{CATEGORY_TEXT[c.category]}</span>
         <span className="tag">{c.volatility} volatility</span>
+        {c.cached && (
+          <span className="tag" title="Verified recently; this result was reused instead of searching again.">
+            cached
+          </span>
+        )}
         <span className="tag tag-state" data-tone={claimTone(c)}>
           {c.label ? <Icon name={c.label} /> : busy ? <i className="dot" /> : <Icon name="unverified" />}
           {claimStateWord(c)}
         </span>
       </div>
-
-      {c.status === "error" && <p className="claim-error">{c.error ?? "This claim could not be checked."}</p>}
-
-      {c.status === "done" && c.label && c.freshness_score !== null && (
-        <div className="verdict">
-          <div className="score-row">
-            <span className="score-label" data-tone={c.label}>
-              <Icon name={c.label} />
-              {LABEL_TEXT[c.label]}
-            </span>
-            <div
-              className="bar"
-              role="meter"
-              aria-label="Freshness score"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={c.freshness_score}
-              data-tone={c.label}
-            >
-              <span style={{ width: `${c.freshness_score}%` }} />
-            </div>
-            <span className="score-num">{c.freshness_score}</span>
-          </div>
-          {c.verdict && <p className="verdict-text">{VERDICT_TEXT[c.verdict]}</p>}
-          {c.current_value && (
-            <p className="now">
-              <span>Now:</span> {c.current_value}
-            </p>
-          )}
-          {c.explanation && <p className="explanation">{c.explanation}</p>}
-        </div>
-      )}
 
       {c.risk_reason && (
         <p className="risk">
@@ -127,12 +101,57 @@ export function ClaimCard({ claim: c, index, active, onActive }: Props) {
         </p>
       )}
 
+      {busy && (
+        <div className="skeleton" aria-hidden="true">
+          <span />
+          <span />
+        </div>
+      )}
+
+      {c.status === "error" && <p className="claim-error">{c.error ?? "This claim could not be checked."}</p>}
+
       {c.status === "done" && (
-        <>
-          <h3 className="sub">Sources</h3>
-          <EvidenceList evidence={c.evidence} />
-          {c.score_breakdown && <Breakdown b={c.score_breakdown} />}
-        </>
+        <div className="reveal">
+          <div>
+            {c.label && c.freshness_score !== null && (
+              <div className="verdict">
+                <div className="score-row">
+                  <span className="score-label" data-tone={c.label}>
+                    <Icon name={c.label} />
+                    {LABEL_TEXT[c.label]}
+                  </span>
+                  <div
+                    className="bar"
+                    role="meter"
+                    aria-label="Freshness score"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={c.freshness_score}
+                    data-tone={c.label}
+                  >
+                    <span style={{ width: `${c.freshness_score}%` }} />
+                  </div>
+                  <span className="score-num">{c.freshness_score}</span>
+                </div>
+                {c.verdict && <p className="verdict-text">{VERDICT_TEXT[c.verdict]}</p>}
+                {c.current_value && (
+                  <p className="now">
+                    <span>Now:</span> {c.current_value}
+                  </p>
+                )}
+                {c.explanation && <p className="explanation">{c.explanation}</p>}
+              </div>
+            )}
+
+            {c.evidence.length > 0 && (
+              <>
+                <h3 className="sub">{mode === "mock" ? "Sources, mock fixtures" : "Sources, live web via Tavily"}</h3>
+                <EvidenceList evidence={c.evidence} />
+              </>
+            )}
+            {c.score_breakdown && <Breakdown b={c.score_breakdown} />}
+          </div>
+        </div>
       )}
     </li>
   );

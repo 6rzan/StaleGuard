@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LABEL_TEXT, labelForScore, statusLine } from "../format";
+import { downloadReport } from "../report";
 import type { Check, Label } from "../types";
 import { Icon } from "./Icon";
 
@@ -57,9 +58,13 @@ const COUNTS: { key: keyof Check["summary"]; label: Label | "skipped"; text: str
 
 export function ResultSummary({ check }: { check: Check }) {
   const failed = check.status === "error";
+  const finished = check.status === "done";
+  // A finished check without a score has nothing time-sensitive to rate.
+  const nothing = finished && check.overall_score === null;
+  const plain = nothing || failed;
   return (
-    <section className="card summary" aria-labelledby="result-title">
-      <ScoreRing score={check.overall_score} />
+    <section className="card summary" data-plain={plain} aria-labelledby="result-title">
+      {!plain && <ScoreRing score={check.overall_score} />}
       <div className="summary-body">
         <h2 id="result-title">
           Freshness report
@@ -68,6 +73,7 @@ export function ResultSummary({ check }: { check: Check }) {
         <p className="status-line" aria-live="polite" data-failed={failed}>
           {failed ? (check.error ?? "The check failed.") : statusLine(check)}
         </p>
+        {nothing && <p className="nothing">No time-sensitive claims found in this answer.</p>}
         <ul className="counts">
           {COUNTS.map(({ key, label, text }) => (
             <li key={key} data-tone={label} data-zero={check.summary[key] === 0}>
@@ -77,6 +83,11 @@ export function ResultSummary({ check }: { check: Check }) {
             </li>
           ))}
         </ul>
+        {finished && (
+          <button type="button" className="btn btn-secondary btn-small download" onClick={() => downloadReport(check)}>
+            Download report
+          </button>
+        )}
       </div>
     </section>
   );

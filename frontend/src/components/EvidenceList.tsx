@@ -3,7 +3,6 @@ import type { Evidence } from "../types";
 import { Icon } from "./Icon";
 
 export function EvidenceList({ evidence }: { evidence: Evidence[] }) {
-  if (evidence.length === 0) return <p className="muted">No sources were found.</p>;
   return (
     <ul className="evidence">
       {evidence.map((e, i) => (

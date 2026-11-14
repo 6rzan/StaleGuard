@@ -21,23 +21,25 @@ export function UsageStrip({ check }: { check: Check }) {
   const tokens = (usage.prompt_tokens + usage.completion_tokens).toLocaleString("en");
   return (
     <section className="usage" aria-labelledby="usage-title">
-      <h2 id="usage-title" className="sr-only">
-        Models and usage
-      </h2>
-      {groups.length > 0 && (
-        <ul className="model-list">
-          {groups.map(({ key, call, count }) => (
-            <li key={key}>
-              <span className="model-stage">
-                {call.stage}
-                {count > 1 && ` x${count}`}
-              </span>
-              <span className="model-name">{call.requested}</span>
-              {call.is_fallback && <span className="fallback-tag">fallback → {call.served_by}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="model-block">
+        <h2 id="usage-title" className="usage-title">
+          {check.mode === "mock" ? "Models, mock rules" : "Models via Bifrost gateway"}
+        </h2>
+        {groups.length > 0 && (
+          <ul className="model-list">
+            {groups.map(({ key, call, count }) => (
+              <li key={key}>
+                <span className="model-stage">
+                  {call.stage}
+                  {count > 1 && ` x${count}`}
+                </span>
+                <span className="model-name">{call.requested}</span>
+                {call.is_fallback && <span className="fallback-tag">fallback → {call.served_by}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <dl className="totals">
         <div>
           <dt>Tokens</dt>
@@ -47,6 +49,12 @@ export function UsageStrip({ check }: { check: Check }) {
           <dt>Searches</dt>
           <dd>{usage.search_calls}</dd>
         </div>
+        {usage.cache_hits > 0 && (
+          <div>
+            <dt>Cache hits</dt>
+            <dd>{usage.cache_hits}</dd>
+          </div>
+        )}
         <div>
           <dt>Duration</dt>
           <dd>{formatDuration(usage.duration_ms)}</dd>
