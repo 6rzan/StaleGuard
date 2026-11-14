@@ -47,3 +47,15 @@ Each batch is accepted only after the diff was read and the gates were run by th
 - Follow-up fix found while writing the README: the mock rewrite replaced a whole sentence; it now changes only the outdated value (2 new tests).
 - Launch audit: PASS 1 at the start, PASS 10 before the release tag. Still open and listed in `docs/OWNER_TODO.md`: GitHub description, topics, Discussions, social preview upload (owner only), demo video link (team).
 - Not verified anywhere: a real Bifrost or Tavily call, the Bifrost container (`--profile live`), Docker on the build machine (WSL is not installed there; CI covers the app image).
+
+## B7: providers Groq + xAI, Bifrost virtual key, accepted 15 Nov 03:05 (one follow-up round)
+
+- Gates: ruff clean; pytest 76 passed (4 new: slashed model ids such as `groq/openai/gpt-oss-120b` are not mistaken for fallbacks, a fallback equal to the requested model is dropped, the smoke hint on a virtual-key 401).
+- Docker in WSL (Engine 29.1.3): app image built (64 s, 308 MB), health, UI, a full mock check, ask mode, history kept across a restart. Live profile with throwaway keys: Bifrost (image of 10 Nov 2026) loaded `bifrost/config.json`; no virtual key 401, wrong key 401, disallowed model 403, correct key routed to Groq `openai/gpt-oss-120b`, which rejected only the fake provider key. The smoke test in the app container reported both missing pieces with the right hints.
+- Not verified: a successful real Groq, xAI or Tavily call (keys not yet added).
+
+## B8: frontend redesign after the DevKit template, accepted 15 Nov 03:20
+
+- Gates: lint 0 warnings; strict build clean; no new npm dependency (Google Fonts link only).
+- Reviewer check with Playwright at 1440 px and 375 px: full landing, a full check on the pricing sample, corrected answer, claim cards, history; `scrollWidth` equals the viewport at both widths; console clean. The implementer also ran all three samples, ask mode with diff, history reopen, and an in-page WCAG text-contrast check (337 text nodes, lowest ratio 5.63:1).
+- Skills used as the team asked: `ui-ux-pro-max` (style, font pairing, contrast and scroll guidelines) and `impeccable` (shape, craft floor, detector: no findings).
