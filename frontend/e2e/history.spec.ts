@@ -38,6 +38,7 @@ test("finished checks appear in the history and reopening one loads it", async (
   await expect(checker.statusLine).toContainText("Finished in");
 
   // And it survives a reload of the page.
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(row(first)).toBeVisible();
   await expect(row(second)).toBeVisible();
