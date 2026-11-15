@@ -79,7 +79,7 @@ export function Hero() {
           </div>
           <div>
             <dt>backend tests</dt>
-            <dd>84</dd>
+            <dd>107</dd>
           </div>
         </dl>
       </div>
