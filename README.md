@@ -17,6 +17,8 @@ git clone https://github.com/6rzan/ai-global-hackathon && cd ai-global-hackathon
 
 Then open http://localhost:8000.
 
+The container runs as an unprivileged user (uid 10001). After updating from 0.1.0, run `docker compose down -v` once if the old `app-data` volume was created as root; this deletes the stored history.
+
 This runs in mock mode. It needs no API keys and makes no network calls. The answers, sources and verdicts come from bundled fictional fixtures (invented companies, `example.com` URLs), and the UI labels them as mock data.
 
 ### Without Docker
