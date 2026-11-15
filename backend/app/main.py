@@ -15,7 +15,7 @@ from .models import Check, CheckRequest, CheckSummary, Health, HealthModels, Sam
 from .pipeline import run_check
 from .providers import get_llm, get_search
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 SAMPLES_PATH = Path(__file__).parent / "fixtures" / "samples.json"
 FRONTEND_DIST = REPO_DIR / "frontend" / "dist"
 

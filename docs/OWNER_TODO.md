@@ -1,38 +1,84 @@
 # Owner to-do
 
-Things the build account cannot do (it has write access to the repo, not admin). Each item says who does it and gives the exact command or steps.
+Things the build account cannot do (it has write access to the repo, not admin). Each item says who does it and gives the exact command or steps. Commands need the GitHub CLI (`gh auth login` as the repo owner) and use the repository `6rzan/ai-global-hackathon`.
 
-## Taha (repo owner)
+## Taha (repo owner): before going public, in this order
 
-### 1. Set the repo description, topics and Discussions
+### 1. Set the description, topics and Discussions
 
 ```bash
 gh repo edit 6rzan/ai-global-hackathon --description "StaleGuard: a stale-answer detector that finds outdated claims in LLM answers, re-verifies them on the live web (Tavily) through the Bifrost gateway, and scores their freshness." --add-topic ai,llm,fact-checking,hallucination-detection,tavily,bifrost,fastapi,react,hackathon --enable-discussions
 ```
 
-### 2. Upload the social preview image
+### 2. Merge the release
 
-GitHub has no API for this. In the repo: Settings, General, Social preview, Edit, upload `docs/media/social-preview.png`.
+Merge the `release/v0.2.0` pull request into `main` once the `backend`, `frontend`, `e2e` and `docker` checks are green, then tag it: `git tag v0.2.0 && git push origin v0.2.0`.
 
-### 3. Make the repo public (only after the secret scan passes)
+### 3. Run the launch audit
 
-Run the audit from the repo root and read item 9 (secret scan). Do not continue unless it says PASS.
+From the repo root. Read the secret scan line; do not continue unless it says PASS.
 
 ```bash
 node ~/.claude/skills/repo-launch-checklist/scripts/audit.mjs --repo .
 ```
 
-Then:
+### 4. Make the repo public
 
 ```bash
 gh repo edit 6rzan/ai-global-hackathon --visibility public --accept-visibility-change-consequences
 ```
 
-After it is public, turn on secret scanning and push protection: Settings, Code security, enable "Secret scanning" and "Push protection".
+### 5. Turn on secret scanning and push protection
+
+```bash
+gh api -X PATCH repos/6rzan/ai-global-hackathon   -f 'security_and_analysis[secret_scanning][status]=enabled'   -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'
+```
+
+### 6. Turn on Dependabot alerts and security updates
+
+`.github/dependabot.yml` already schedules weekly version updates. These two calls enable the alerts and the automatic security pull requests:
+
+```bash
+gh api -X PUT repos/6rzan/ai-global-hackathon/vulnerability-alerts
+gh api -X PUT repos/6rzan/ai-global-hackathon/automated-security-fixes
+```
+
+### 7. Turn on private vulnerability reporting
+
+`.github/SECURITY.md` tells people to use it.
+
+```bash
+gh api -X PUT repos/6rzan/ai-global-hackathon/private-vulnerability-reporting
+```
+
+### 8. Protect `main`
+
+Require a pull request and passing CI. The check names are the job names in `.github/workflows/ci.yml`. The approval count is 0 so the owner can merge their own pull request; raise it to 1 once a second reviewer is active.
+
+```bash
+gh api -X PUT repos/6rzan/ai-global-hackathon/branches/main/protection --input - <<'JSON'
+{
+  "required_status_checks": { "strict": true, "contexts": ["backend", "frontend", "e2e", "docker"] },
+  "enforce_admins": false,
+  "required_pull_request_reviews": { "required_approving_review_count": 0 },
+  "restrictions": null
+}
+JSON
+```
+
+### 9. Upload the social preview image (manual)
+
+GitHub has no API for this. In the repo: Settings, General, Social preview, Edit, upload `docs/media/social-preview.png`.
+
+### 10. Set the homepage (only once the video URL exists)
+
+```bash
+gh repo edit 6rzan/ai-global-hackathon --homepage "https://VIDEO-URL"
+```
 
 ## The team
 
-### 4. Add real keys
+### 11. Add real keys
 
 Put them in `.env` on the machine that records the demo (copy from `.env.example`). Never commit `.env`.
 
@@ -40,7 +86,6 @@ Put them in `.env` on the machine that records the demo (copy from `.env.example
 |---|---|
 | `TAVILY_API_KEY` | https://app.tavily.com |
 | `GROQ_API_KEY` | https://console.groq.com/keys (extract, judge, rewrite) |
-
 | `BIFROST_VIRTUAL_KEY` | Make it yourself: `echo sk-bf-$(openssl rand -hex 24)`. Required in live mode; must start with `sk-bf-`. |
 | `BIFROST_SETUP_TOKEN` | Make it yourself: `openssl rand -hex 32`. Only to create the dashboard admin account. |
 
@@ -54,7 +99,7 @@ To open the Bifrost dashboard (needed for the demo video):
 4. Turn on password protection.
 5. Paste the setup token when asked.
 
-### 5. Run the smoke test
+### 12. Run the smoke test
 
 Passed on 15 Nov 2026 with real keys: bifrost (served by `groq/openai/gpt-oss-120b`, about 1.3 s), tavily (5 results) and check all PASS. Re-run it if you change keys or models.
 
@@ -75,24 +120,24 @@ All three lines (`bifrost`, `tavily`, `check`) must start with PASS. If one says
 
 ### Docker on the build machine
 
-Docker Desktop could not start on the build machine because WSL is not installed. The container is verified by the CI `docker` job instead. To run it locally: `wsl --install` in an administrator PowerShell, reboot, then start Docker Desktop.
+Docker Desktop does not start on the build machine. Docker Engine runs inside WSL (Ubuntu), where the app image and the live-profile gateway were built and started; the CI `docker` job checks the image on every push too.
 
-### 6. Record the demo video
+### 13. Record the demo video
 
 Follow `docs/pitch/demo-video-script.md` (2 to 3 minutes, live mode). Rehearse once first, because live answers depend on the models.
 
-### 7. Put the video link in the README
+### 14. Put the video link in the README
 
 In `README.md`, replace `<!-- DEMO VIDEO LINK -->` with the link, for example `[Watch on YouTube](https://...)`.
 
 ## Esam (team leader)
 
-### 8. Submit on HackCulture
+### 15. Submit on HackCulture
 
 Submit at least 2 hours before the deadline, 15 Nov 2026 23:59 IST (16 Nov 2026 02:29 MYT). In the form:
 
 - Theme: PS06
 - Tick "Tavily integration"
-- Repository link: https://github.com/6rzan/ai-global-hackathon (must be public by then, see item 3)
+- Repository link: https://github.com/6rzan/ai-global-hackathon (must be public by then, see item 4)
 - Deck: the files in `docs/pitch/`
-- Video link: the one from item 7
+- Video link: the one from item 14

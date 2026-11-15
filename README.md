@@ -17,6 +17,8 @@ git clone https://github.com/6rzan/ai-global-hackathon && cd ai-global-hackathon
 
 Then open http://localhost:8000.
 
+The container runs as an unprivileged user (uid 10001). After updating from 0.1.0, run `docker compose down -v` once if the old `app-data` volume was created as root; this deletes the stored history.
+
 This runs in mock mode. It needs no API keys and makes no network calls. The answers, sources and verdicts come from bundled fictional fixtures (invented companies, `example.com` URLs), and the UI labels them as mock data.
 
 ### Without Docker
@@ -277,7 +279,7 @@ From the repo root:
 | Backend tests | `cd backend && uv run pytest -q` | 84 tests (last run: 84 passed): score formula, claim spans, the Bifrost and Tavily clients against a mocked HTTP transport, the pipeline, cache, and the API. No network. |
 | Frontend lint | `cd frontend && npm run lint` | oxlint with warnings denied |
 | Frontend build | `cd frontend && npm run build` | TypeScript check and Vite bundle |
-| End-to-end | `cd frontend && npm run test:e2e` | Playwright (Chromium) against a mock-mode backend on port 8001 with a temp database: landing, checker, ask mode, history, export, cache, errors, responsive, accessibility (axe), console. First time: `npx playwright install chromium`. `LIVE_E2E=1 npx playwright test e2e/live.spec.ts` runs one real check against a live backend on port 8000. |
+| End-to-end | `cd frontend && npm run test:e2e` | 34 Playwright tests (Chromium) plus one opt-in live test, against a mock-mode backend on port 8001 with a temp database: landing, checker, ask mode, history, export, cache, errors, responsive, accessibility (axe), console. First time: `npx playwright install chromium`. `LIVE_E2E=1 npx playwright test e2e/live.spec.ts` runs one real check against a live backend on port 8000. |
 
 `make test` runs the backend lint, backend tests and frontend lint; `make build` runs the frontend build.
 
@@ -335,10 +337,10 @@ Makefile        dev, test, build and smoke commands
 
 | Member | Area |
 |---|---|
-| Esam Al-Areqi (team leader) | Repo setup, CI, README, docs, pitch deck, demo |
-| Taha Thabit | Core engine and backend, Bifrost and Tavily integration, Docker |
-| Saadat Ahmed | Prompts (the claim and judge agents), mock adapters, fixtures, tests, smoke test |
-| Alaa Aldeen Alhakami | Frontend and UI |
+| Esam Al-Areqi | Team and organization leader. Came up with the idea and led its implementation; wrote the instructions (the build brief) the project was built from: goals, constraints, stack, review rules. Repo setup, CI, README and docs, pitch deck, demo. |
+| Taha Thabit | Repository owner. Core engine and backend, Bifrost and Tavily integration, Groq provider setup and the gateway virtual key, Docker and WSL setup, security and repository settings. |
+| Saadat Ahmed | Claim and judge prompts, mock adapters and fixtures, backend tests, smoke test, end-to-end test suite and QA report, security scanning. |
+| Alaa Aldeen Alhakami | Frontend and UI: the checker, the dark developer-tool redesign, accessibility, responsive layout. |
 
 Areas are ownership, not authorship; how the code was written is described under AI tools used to build this.
 

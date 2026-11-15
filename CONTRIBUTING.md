@@ -16,9 +16,12 @@ make dev-frontend          # terminal 2, http://localhost:5173
 ## Before you open a PR
 
 ```bash
-make test
-make build
+make test                          # backend lint and tests (84), frontend lint
+make build                         # frontend type check and bundle
+cd frontend && npm run test:e2e    # Playwright, 34 tests in Chromium, mock mode
 ```
+
+The first end-to-end run needs the browser: `cd frontend && npx playwright install chromium`.
 
 1. Open an issue first for anything bigger than a small fix, so we can agree on the approach.
 2. Branch from `main`, one change per PR, and describe what changed and how you tested it.
@@ -27,7 +30,7 @@ make build
 
 ## Where to start
 
-Issues labelled [`good first issue`](https://github.com/6rzan/ai-global-hackathon/labels/good%20first%20issue) are small and scoped. Questions go to [Discussions](https://github.com/6rzan/ai-global-hackathon/discussions); bugs go to Issues.
+Issues labelled [`good first issue`](https://github.com/6rzan/ai-global-hackathon/labels/good%20first%20issue) are small and scoped. Report security problems privately, see [SECURITY.md](.github/SECURITY.md). Questions go to [Discussions](https://github.com/6rzan/ai-global-hackathon/discussions); bugs go to Issues.
 
 ## Response time
 

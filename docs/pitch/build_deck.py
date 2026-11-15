@@ -483,14 +483,14 @@ def slide8():
     s = Slide(bg=BG)
     s.notes = (
         "The prototype runs with one command and needs no keys: mock mode uses bundled fictional fixtures and makes no network calls. "
-        "The backend has 84 tests and CI is green on three jobs: backend, frontend and docker. Other tools can call the JSON API as a verification layer. "
+        "The backend has 84 tests and CI is green on four jobs: backend, frontend, e2e and docker. There are also 34 end-to-end tests. Other tools can call the JSON API as a verification layer. "
         "It has also run live: make smoke passed, and through the UI the answer about Python 3.12 and Node.js 20 finished in 13.3 seconds with both claims stale, current values Python 3.15 and Node.js 26 from dated sources, and all 4 model calls on gpt-oss-120b through Bifrost. The screenshot is that run."
     )
     chrome(s, 8, "Working prototype", "A working prototype that runs in one command")
     items = [
         ("One command", "$ docker compose up", True),
         ("Mock mode", "No keys, no network calls", False),
-        ("Tested", "84 backend tests; CI green on backend, frontend and docker", False),
+        ("Tested", "84 backend tests, 34 end-to-end tests; CI green on backend, frontend, e2e and docker", False),
         ("A verification layer", "POST /api/checks?wait=true returns the JSON report", False),
     ]
     for i, (h1, body, mono) in enumerate(items):
@@ -522,7 +522,7 @@ def slide9():
     s.notes = (
         "Next we want the model to call Tavily itself as a tool through Bifrost's MCP gateway, instead of the fixed search-then-judge order. "
         "After that, a streaming proxy that annotates answers in place, and scheduled re-checks of saved answers. "
-        "The team splits the work as shown, and the whole project, specs and CI included, is in the public repository. "
+        "Esam, our team and organization leader, had the idea, led its implementation and wrote the build brief the project was built from; Taha owns the repository and the backend; Saadat covers prompts, tests and QA; Alaa built the frontend and the redesign. The whole project, specs and CI included, is in the public repository. "
         "The project was planned, written and reviewed with AI coding tools (Claude Code), and the README has the full disclosure."
     )
     chrome(s, 9, "What is next and team", "What is next, and the team")
@@ -543,10 +543,10 @@ def slide9():
     s.text(tx, 1.75, c1, 0.35, [para("MEMBER", 12, GREEN, font="mono", bold=True)], anchor="mid")
     s.text(tx + c1, 1.75, tw - c1, 0.35, [para("AREA", 12, GREEN, font="mono", bold=True)], anchor="mid")
     team = [
-        ("Esam Al-Areqi", "team leader", "Repo setup, CI, README, docs, pitch deck, demo"),
-        ("Taha Thabit", None, "Core engine and backend, Bifrost and Tavily integration, Docker"),
-        ("Saadat Ahmed", None, "Prompts (the claim and judge agents), mock adapters, fixtures, tests, smoke test"),
-        ("Alaa Aldeen Alhakami", None, "Frontend and UI"),
+        ("Esam Al-Areqi", "team and organization leader", "Had the idea and led its implementation; wrote the build brief; repo, CI, docs, deck, demo"),
+        ("Taha Thabit", "repository owner", "Core engine and backend; Bifrost, Tavily and Groq integration; Docker; security and repo settings"),
+        ("Saadat Ahmed", None, "Claim and judge prompts, mock data, backend tests, end-to-end suite and QA, security scanning"),
+        ("Alaa Aldeen Alhakami", None, "Frontend and UI, the redesign, accessibility, responsive layout"),
     ]
     rh = 0.98
     for i, (name, role, area) in enumerate(team):
@@ -742,6 +742,10 @@ def export_with_powerpoint(pptx, pdf, tmp):
     """Export through PowerPoint COM; returns False when it is not available or fails."""
     if not POWERPOINT.exists():
         return False
+    # Quitting would also close a PowerPoint session someone else has open.
+    if "POWERPNT.EXE" in subprocess.run(["tasklist"], capture_output=True, text=True).stdout:
+        print("PowerPoint is already running; close it to export the PDF through it")
+        return False
     out = tmp / "powerpoint-export.pdf"
     script = (
         "$ErrorActionPreference='Stop';"
@@ -764,10 +768,15 @@ def export_with_powerpoint(pptx, pdf, tmp):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--reportlab-pdf", action="store_true", help="skip PowerPoint and draw the PDF with reportlab")
+    ap.add_argument("--out-dir", help="write the deck here instead of next to this script")
     ap.add_argument("--png", help="folder to write one PNG per PDF page (needs pymupdf)")
     args = ap.parse_args()
 
     register_fonts()
+    global OUT_PPTX, OUT_PDF
+    if args.out_dir:
+        Path(args.out_dir).mkdir(parents=True, exist_ok=True)
+        OUT_PPTX, OUT_PDF = Path(args.out_dir) / OUT_PPTX.name, Path(args.out_dir) / OUT_PDF.name
     tmp = Path(tempfile.mkdtemp(prefix="staleguard-deck-"))
 
     slides = [slide1(), slide2(), slide3(), slide4(), slide5(), slide6(), slide7(), slide8(), slide9()]

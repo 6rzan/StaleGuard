@@ -48,7 +48,7 @@ export function Hero() {
       <div className="container hero-inner">
         <p className="version-pill">
           <span className="mode-dot" aria-hidden="true" />
-          v0.1.0 · Tavily + Bifrost
+          v0.2.0 · Tavily + Bifrost
         </p>
         <h1 id="hero-title">
           Catch stale facts

@@ -20,6 +20,6 @@ It takes an answer (pasted, or generated from a question), picks out the claims 
 
 How it works: models are called through the Bifrost gateway, so extraction, judging and answering can each use a different model, with fallbacks configured in one place. The score is not produced by a model. The model returns a verdict, a confidence and a stance per source, and a fixed formula (source age against a half-life per category, agreement, confidence) turns that into the number. Claims must be exact substrings of the answer, and a claim with no sources is reported as unverified instead of guessed.
 
-What it doesn't do yet: the live path (real Bifrost and Tavily calls) is tested against mocked HTTP only, so we would like to hear about failures with real keys. English only, no authentication, and results depend on the models you configure. Bifrost's MCP gateway, so the model can call Tavily as a tool, is the next step.
+What it doesn't do yet: the live path (real Bifrost, Groq and Tavily calls) was verified by the team on one set of keys, so we would like to hear about failures with yours. English only, no authentication, and results depend on the models you configure. Bifrost's MCP gateway, so the model can call Tavily as a tool, is the next step.
 
 We'd love feedback on whether a fixed half-life per category (90 days for prices, a year for statistics) is a sensible way to score staleness, and what you would use instead.
