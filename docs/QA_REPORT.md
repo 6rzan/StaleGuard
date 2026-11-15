@@ -76,3 +76,14 @@ Coverage percentage is not reported: the frontend has no unit-test coverage tool
 ## Live run of the `@live` spec
 
 Run by the reviewer on 15 Nov 2026 with real keys: backend in live mode on port 8000, Bifrost gateway in WSL Docker, Groq `gpt-oss-120b`, Tavily. `LIVE_E2E=1 npx playwright test e2e/live.spec.ts`: 1 passed (12.1 s). The check finished, both claims were verified (no error), sources were listed, and the header badge read "Live: Bifrost + Tavily". The reviewer also reran the mock suite: 34 passed, 1 skipped (56 s).
+
+## Security scan, 15 Nov 2026
+
+- gitleaks over all 72 commits of a fresh clone and over the working tree: no leaks.
+- pip-audit on the backend lock: no known vulnerabilities.
+- npm audit (with dev dependencies): 0 vulnerabilities.
+- bandit on `backend/app`: 1 low finding, B110 (try/except/pass) in `pipeline.py`. It is intentional: an optional rewrite failure leaves `corrected_answer` empty and the check still finishes.
+- Trivy on the image: 0 critical, 0 secrets, 0 misconfigurations, 49 HIGH in Debian base packages. Two of them (zlib) had fixes and are now patched by `apt-get upgrade` in the final stage; the rest have no upstream fix yet.
+- The container now runs as a non-root user (uid 10001).
+
+Fresh clone: a clean clone passed `uv sync` + ruff + 84 backend tests, `npm ci` + lint + build, the 34 end-to-end tests, and `docker compose up` (mock mode).
