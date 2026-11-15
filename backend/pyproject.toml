@@ -1,6 +1,6 @@
 [project]
 name = "staleguard-backend"
-version = "0.1.0"
+version = "0.2.0"
 description = "StaleGuard backend: finds time-sensitive claims in LLM answers and re-verifies them on the live web."
 requires-python = ">=3.11"
 dependencies = [
