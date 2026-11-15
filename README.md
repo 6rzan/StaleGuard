@@ -4,7 +4,7 @@ StaleGuard finds time-sensitive claims in an LLM answer, re-checks each one agai
 
 ![StaleGuard demo](docs/media/demo.gif)
 
-**Demo video:** <!-- DEMO VIDEO LINK -->
+**Demo video:** [Watch the 2-minute demo (MP4)](docs/media/staleguard-demo.mp4)
 
 [![CI](https://github.com/6rzan/StaleGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/6rzan/StaleGuard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)

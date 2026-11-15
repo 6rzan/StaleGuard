@@ -70,10 +70,10 @@ JSON
 
 GitHub has no API for this. In the repo: Settings, General, Social preview, Edit, upload `docs/media/social-preview.png`.
 
-### 10. Set the homepage (only once the video URL exists)
+### 10. Set the homepage to the demo video
 
 ```bash
-gh repo edit 6rzan/StaleGuard --homepage "https://VIDEO-URL"
+gh repo edit 6rzan/StaleGuard --homepage "https://github.com/6rzan/StaleGuard/blob/main/docs/media/staleguard-demo.mp4"
 ```
 
 ## The team
@@ -124,11 +124,11 @@ Docker Desktop does not start on the build machine. Docker Engine runs inside WS
 
 ### 13. Record the demo video
 
-Follow `docs/pitch/demo-video-script.md` (2 to 3 minutes, live mode). Rehearse once first, because live answers depend on the models.
+Done 15 Nov: `docs/media/staleguard-demo.mp4` (1:54, 1280x720, no audio, on-screen captions), a screen recording of the app in live mode (Groq through Bifrost, Tavily), made with `scripts/record-video.mjs`. If you want a narrated version, record over the same flow with `docs/pitch/demo-video-script.md` and replace the file and the links. Optional: upload the MP4 to YouTube (unlisted) for a link that plays everywhere.
 
 ### 14. Put the video link in the README
 
-In `README.md`, replace `<!-- DEMO VIDEO LINK -->` with the link, for example `[Watch on YouTube](https://...)`.
+Done: the README links the MP4. For the HackCulture form use https://github.com/6rzan/StaleGuard/blob/main/docs/media/staleguard-demo.mp4 (it plays once the repository is public), or the YouTube link if you upload one.
 
 ## Esam (team leader)
 
