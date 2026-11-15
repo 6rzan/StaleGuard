@@ -16,9 +16,14 @@ node_modules/
 dist/
 
 # data
+backend/data/
 *.db
 *.db-journal
 *.sqlite3
+
+# test output
+frontend/test-results/
+frontend/playwright-report/
 
 # os / editors
 .DS_Store
