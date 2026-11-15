@@ -5,8 +5,8 @@ Thanks for helping. Small, focused pull requests get merged fastest.
 ## Run it locally
 
 ```bash
-git clone https://github.com/6rzan/ai-global-hackathon.git
-cd ai-global-hackathon
+git clone https://github.com/6rzan/StaleGuard.git
+cd StaleGuard
 cd backend && uv sync && cd ../frontend && npm ci && cd ..
 cp .env.example .env       # MOCK_MODE=true works without keys; never commit .env
 make dev-backend           # terminal 1, http://localhost:8000
@@ -30,7 +30,7 @@ The first end-to-end run needs the browser: `cd frontend && npx playwright insta
 
 ## Where to start
 
-Issues labelled [`good first issue`](https://github.com/6rzan/ai-global-hackathon/labels/good%20first%20issue) are small and scoped. Report security problems privately, see [SECURITY.md](.github/SECURITY.md). Questions go to [Discussions](https://github.com/6rzan/ai-global-hackathon/discussions); bugs go to Issues.
+Issues labelled [`good first issue`](https://github.com/6rzan/StaleGuard/labels/good%20first%20issue) are small and scoped. Report security problems privately, see [SECURITY.md](.github/SECURITY.md). Questions go to [Discussions](https://github.com/6rzan/StaleGuard/discussions); bugs go to Issues.
 
 ## Response time
 

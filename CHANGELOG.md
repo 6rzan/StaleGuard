@@ -55,6 +55,6 @@ First release, built for the Global AI Hackathon 2026 (PS06, Tavily + Bifrost).
 - The live path has only been tested against mocked HTTP transports; run the smoke test with real keys first.
 - English only, no authentication.
 
-[Unreleased]: https://github.com/6rzan/ai-global-hackathon/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/6rzan/ai-global-hackathon/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/6rzan/ai-global-hackathon/releases/tag/v0.1.0
+[Unreleased]: https://github.com/6rzan/StaleGuard/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/6rzan/StaleGuard/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/6rzan/StaleGuard/releases/tag/v0.1.0

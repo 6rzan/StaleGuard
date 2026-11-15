@@ -562,7 +562,7 @@ def slide9():
     ])
     s.rect(MX, 6.5, W - 2 * MX, 0.45, fill=CARD, line=BORDER, lw=1.0, r=0.1)
     s.text(MX + 0.25, 6.5, W - 2 * MX - 0.5, 0.45, [
-        runs([("Repo  ", dict(bold=True, color=GREEN, font="mono")), ("https://github.com/6rzan/ai-global-hackathon", dict(font="mono"))], 15),
+        runs([("Repo  ", dict(bold=True, color=GREEN, font="mono")), ("https://github.com/6rzan/StaleGuard", dict(font="mono"))], 15),
     ], anchor="mid")
     return s
 
