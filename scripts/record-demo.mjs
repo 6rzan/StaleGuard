@@ -9,6 +9,10 @@
 //   npm install --prefix /tmp/pw playwright && npx --prefix /tmp/pw playwright install chromium
 //   PW_DIR=/tmp/pw node scripts/record-demo.mjs
 //
+// --live: records only demo.gif with real data. Start the backend WITHOUT MOCK_MODE (keys come from the
+// repo's own .env), with the Bifrost gateway up, a fresh DATABASE_PATH, and wait 70 s between attempts
+// (Groq free-tier rate limit):  PW_DIR=/tmp/pw node scripts/record-demo.mjs --live
+//
 // Optional: BASE_URL (default http://127.0.0.1:8000). Frames go to a temp folder, not the repo.
 
 import { spawnSync } from "node:child_process";
@@ -29,6 +33,7 @@ fs.rmSync(frames, { recursive: true, force: true });
 fs.mkdirSync(frames, { recursive: true });
 fs.mkdirSync(media, { recursive: true });
 
+const LIVE = process.argv.includes("--live");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const VIEWPORT = { width: 1280, height: 800 };
 const still = (name) => path.join(media, name);
@@ -38,6 +43,7 @@ const ASSEMBLE = `
 import sys, glob, os
 from PIL import Image, ImageChops
 src, out = sys.argv[1], sys.argv[2]
+live = len(sys.argv) > 3  # live: merge near-identical frames (spinners) and cap each hold at 1 s
 files = sorted(glob.glob(os.path.join(src, "*.jpg")))
 stamps = [int(os.path.basename(f)[:-4]) for f in files]
 imgs, durs = [], []
@@ -45,10 +51,13 @@ for i, f in enumerate(files):
     im = Image.open(f).convert("RGB")
     im = im.resize((960, round(im.height * 960 / im.width)), Image.LANCZOS)
     d = (stamps[i + 1] - stamps[i]) if i + 1 < len(files) else 1000
-    if imgs and ImageChops.difference(imgs[-1], im).getbbox() is None:
+    same = imgs and (sum(ImageChops.difference(imgs[-1], im).convert('L').histogram()[16:]) < (600 if live else 1)) 
+    if same:
         durs[-1] += d
     else:
         imgs.append(im); durs.append(d)
+if live:
+    durs = [min(d, 1000) for d in durs]
 pal = [im.quantize(colors=128, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE) for im in imgs]
 pal[0].save(out, save_all=True, append_images=pal[1:], duration=durs, loop=0, optimize=True, disposal=1)
 print(len(files), "frames captured,", len(imgs), "kept,", sum(durs) / 1000, "seconds")
@@ -117,6 +126,59 @@ async function recordDemo(browser) {
   capturing = false;
   await loop;
 
+  await context.close();
+}
+
+// Live story: a real check against Groq via Bifrost and Tavily (the backend must run without MOCK_MODE).
+const LIVE_ANSWER =
+  "Python 3.12 is the latest stable version of Python. The current long-term support release of Node.js is version 20.";
+
+async function recordLiveDemo(browser) {
+  const context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: "no-preference" });
+  const page = await context.newPage();
+  await page.goto(base);
+  await page.getByText("Live: Bifrost + Tavily").first().waitFor();
+
+  let capturing = true;
+  const loop = (async () => {
+    while (capturing) {
+      const t = Date.now();
+      try {
+        await page.screenshot({ path: path.join(frames, `${String(t).padStart(14, "0")}.jpg`), type: "jpeg", quality: 92 });
+      } catch {
+        return;
+      }
+      await sleep(Math.max(0, 100 - (Date.now() - t)));
+    }
+  })();
+
+  await sleep(1500);
+  await smoothScrollTo(page, "#checker", "start");
+  await sleep(400);
+  await page.locator("#answer").click();
+  await page.locator("#answer").pressSequentially(LIVE_ANSWER, { delay: 14 });
+  await sleep(500);
+  await page.getByRole("button", { name: "Check freshness" }).click();
+  await page.getByText(/^Finished in/).waitFor({ timeout: 120000 });
+  const failed = await page.locator(".claim-error").count();
+  if (failed > 0) {
+    capturing = false;
+    await loop;
+    await context.close();
+    throw new Error("a claim ended in an error (rate limit?); wait 70 s and retry");
+  }
+  await sleep(800);
+  await smoothScrollTo(page, ".claim-card:has(.now)");
+  await sleep(2200);
+  await smoothScrollTo(page, ".usage");
+  await sleep(1500);
+  await smoothScrollTo(page, ".corrected");
+  await sleep(600);
+  await page.getByRole("button", { name: "Show what changed" }).click();
+  await sleep(1500);
+
+  capturing = false;
+  await loop;
   await context.close();
 }
 
@@ -196,20 +258,24 @@ async function stillLanding(browser) {
 
 const browser = await chromium.launch();
 try {
-  await recordDemo(browser);
-  await stillReport(browser);
-  await stillClaim(browser);
-  await stillAsk(browser);
-  await stillMobile(browser);
-  await stillLanding(browser);
-  await socialPreview(browser);
+  if (LIVE) {
+    await recordLiveDemo(browser);
+  } else {
+    await recordDemo(browser);
+    await stillReport(browser);
+    await stillClaim(browser);
+    await stillAsk(browser);
+    await stillMobile(browser);
+    await stillLanding(browser);
+    await socialPreview(browser);
+  }
 } finally {
   await browser.close();
 }
 
 const run = spawnSync(
   "uv",
-  ["run", "--no-project", "--with", "pillow", "python", "-c", ASSEMBLE, frames, still("demo.gif")],
+  ["run", "--no-project", "--with", "pillow", "python", "-c", ASSEMBLE, frames, still("demo.gif"), ...(LIVE ? ["live"] : [])],
   { stdio: "inherit" },
 );
 fs.rmSync(frames, { recursive: true, force: true });
