@@ -41,6 +41,10 @@ cd frontend && npm run dev
 
 Open http://localhost:5173. The first command installs both sets of dependencies and only needs to run once.
 
+## The problem
+
+Language models state prices, API versions, laws and who runs a company with full confidence, even when those facts were only true when the model was trained. Nothing in the answer marks which sentences to doubt, so a wrong version number reads exactly like a right one. Support bots, documentation assistants and sales answers are hurt first, because people act on what they say. Checking every claim by hand against the live web is slow, so in practice it often does not happen. StaleGuard splits an answer into claims, searches the live web for the ones that can change, and marks each as current, outdated or unverified, with dated sources and a corrected answer.
+
 ## What it does
 
 The hackathon problem (PS06) asks for four things. This is how each one is covered.
@@ -329,6 +333,7 @@ The hackathon rules ask for this to be stated, so plainly:
 - The spec, plan and task list were written by the planner in the GitHub Spec Kit layout.
 - The planner chose the problem statement by scoring the six options against the team's criteria. The scores and every later decision are logged in [docs/DECISIONS.md](docs/DECISIONS.md).
 - Every batch was reviewed (diff read, gates rerun, browser check for UI changes) before it was committed. The review notes are in [specs/001-stale-answer-detector/validation.md](specs/001-stale-answer-detector/validation.md).
+- The interface design follows the structure and look of the "developer tools" demo template from UI UX Pro Max (https://uupm.cc/demo/developer-tools). The code was written for this project, and the `ui-ux-pro-max` and `impeccable` design skills were used while building it.
 - The team wrote the brief that set the goal, the constraints, the default stack and the review rules, and owns the result.
 
 ## Project layout

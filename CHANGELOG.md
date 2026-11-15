@@ -5,6 +5,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-15
+
+### Fixed
+- The claim cache is keyed by mode and judge model, so mock and live results and results from different models are no longer mixed.
+- A verdict needs a backing source; a claim without one stays unverified.
+- The corrected answer is kept only inside outdated claims.
+- Highlights are cut by code points, not UTF-16 units.
+- A reload race in the end-to-end suite.
+
+### Security
+- Live-mode limits: 6 checks per minute per client and 100 per UTC day.
+- History is per browser; the list endpoint for all checks is behind `SHARED_HISTORY`.
+
+### Changed
+- The repository is renamed to `6rzan/StaleGuard`.
+- Backend tests: 107. End-to-end tests: 37.
+- Deck links and counts updated.
+- README problem section and design credit.
+- Demo video added.
+
 ## [0.2.0] - 2026-11-15
 
 Live providers, a gateway virtual key, a redesigned interface and an end-to-end test suite.
@@ -55,6 +75,7 @@ First release, built for the Global AI Hackathon 2026 (PS06, Tavily + Bifrost).
 - The live path has only been tested against mocked HTTP transports; run the smoke test with real keys first.
 - English only, no authentication.
 
-[Unreleased]: https://github.com/6rzan/StaleGuard/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/6rzan/StaleGuard/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/6rzan/StaleGuard/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/6rzan/StaleGuard/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/6rzan/StaleGuard/releases/tag/v0.1.0
