@@ -277,6 +277,7 @@ From the repo root:
 | Backend tests | `cd backend && uv run pytest -q` | 84 tests (last run: 84 passed): score formula, claim spans, the Bifrost and Tavily clients against a mocked HTTP transport, the pipeline, cache, and the API. No network. |
 | Frontend lint | `cd frontend && npm run lint` | oxlint with warnings denied |
 | Frontend build | `cd frontend && npm run build` | TypeScript check and Vite bundle |
+| End-to-end | `cd frontend && npm run test:e2e` | Playwright (Chromium) against a mock-mode backend on port 8001 with a temp database: landing, checker, ask mode, history, export, cache, errors, responsive, accessibility (axe), console. First time: `npx playwright install chromium`. `LIVE_E2E=1 npx playwright test e2e/live.spec.ts` runs one real check against a live backend on port 8000. |
 
 `make test` runs the backend lint, backend tests and frontend lint; `make build` runs the frontend build.
 
