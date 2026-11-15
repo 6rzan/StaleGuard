@@ -847,6 +847,10 @@ input[type="text"]::placeholder {
   line-height: 1;
   white-space: nowrap;
 }
+/* The number is drawn, not text, so it stays out of the span's visible text (WCAG 2.5.3). */
+.claim-tag::after {
+  content: attr(data-n);
+}
 .dot {
   display: inline-block;
   width: 0.9em;

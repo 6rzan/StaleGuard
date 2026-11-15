@@ -43,7 +43,7 @@ export function AnswerView({ check, activeId, onActive, onOpen }: Props) {
         data-busy={c.status === "pending" || c.status === "verifying"}
         role="button"
         tabIndex={0}
-        aria-label={`Claim ${index}, ${claimStateWord(c)}: ${c.text}. Go to details.`}
+        aria-label={`${c.text} Claim ${index}, ${claimStateWord(c)}. Go to details.`}
         onClick={() => onOpen(c.id)}
         onKeyDown={onKey}
         onMouseEnter={() => onActive(c.id)}
@@ -54,9 +54,8 @@ export function AnswerView({ check, activeId, onActive, onOpen }: Props) {
         {text.slice(0, split)}
         <span className="nowrap">
           {text.slice(split)}
-          <span className="claim-tag" aria-hidden="true">
+          <span className="claim-tag" aria-hidden="true" data-n={index}>
             {c.label ? <Icon name={c.label} /> : c.status === "skipped" ? null : <i className="dot" />}
-            {index}
           </span>
         </span>
       </span>,
