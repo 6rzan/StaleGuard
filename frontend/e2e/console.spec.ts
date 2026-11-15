@@ -9,7 +9,10 @@ test("a full session: no console problems, no failed requests, stable layout", a
   page.on("response", (r) => {
     if (r.status() >= 400) failed.push(`${r.status()} ${r.url()}`);
   });
-  page.on("requestfailed", (r) => failed.push(`failed ${r.url()}`));
+  page.on("requestfailed", (r) => {
+    // A navigation cancelling an in-flight request is not an app failure.
+    if (r.failure()?.errorText !== "net::ERR_ABORTED") failed.push(`failed ${r.url()}`);
+  });
   await page.addInitScript(() => {
     const w = window as unknown as { __vitals: { lcp: number; cls: number } };
     w.__vitals = { lcp: 0, cls: 0 };
@@ -44,6 +47,8 @@ test("a full session: no console problems, no failed requests, stable layout", a
   await checker.finished();
   await checker.historyRows.first().click();
   await checker.finished();
+  // Let the history reloads that follow a finished check settle before navigating away.
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(checker.historyRows.first()).toBeVisible();
 
