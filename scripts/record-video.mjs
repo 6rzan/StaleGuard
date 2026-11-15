@@ -1,4 +1,5 @@
-// Records docs/media/staleguard-demo.mp4: a captioned screen recording of the live app (no audio).
+// Records docs/media/staleguard-screen-recording.mp4: a captioned screen recording of the live app (no audio).
+// It is the source footage for the narrated cut in docs/media/staleguard-demo.mp4, which this script does not overwrite.
 //
 // Needs: the built frontend served by the backend on http://127.0.0.1:8000 in LIVE mode (real keys in
 // the repo's .env, Bifrost gateway up on :8080), a fresh DATABASE_PATH so nothing is cached, Playwright
@@ -26,7 +27,7 @@ const { chromium } = require("playwright");
 
 const work = path.join(os.tmpdir(), "staleguard-video");
 fs.mkdirSync(work, { recursive: true });
-const out = path.join(root, "docs", "media", "staleguard-demo.mp4");
+const out = path.join(root, "docs", "media", "staleguard-screen-recording.mp4");
 const only = (process.argv.find((a) => a.startsWith("--segment=")) ?? "").slice(10);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

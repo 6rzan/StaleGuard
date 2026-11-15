@@ -4,7 +4,7 @@ StaleGuard finds time-sensitive claims in an LLM answer, re-checks each one agai
 
 ![StaleGuard demo](docs/media/demo.gif)
 
-**Demo video:** [Watch the 2-minute demo (MP4)](docs/media/staleguard-demo.mp4)
+**Demo video:** [Watch the 2-minute demo on YouTube](https://youtu.be/an9OuJ4WdCw) (2:14, narrated). The same file is in the repo: [docs/media/staleguard-demo.mp4](docs/media/staleguard-demo.mp4).
 
 [![CI](https://github.com/6rzan/StaleGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/6rzan/StaleGuard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -334,6 +334,7 @@ The hackathon rules ask for this to be stated, so plainly:
 - The planner chose the problem statement by scoring the six options against the team's criteria. The scores and every later decision are logged in [docs/DECISIONS.md](docs/DECISIONS.md).
 - Every batch was reviewed (diff read, gates rerun, browser check for UI changes) before it was committed. The review notes are in [specs/001-stale-answer-detector/validation.md](specs/001-stale-answer-detector/validation.md).
 - The interface design follows the structure and look of the "developer tools" demo template from UI UX Pro Max (https://uupm.cc/demo/developer-tools). The code was written for this project, and the `ui-ux-pro-max` and `impeccable` design skills were used while building it.
+- The demo video is a real screen recording of the app in live mode. The narration is Taha's own voice, cloned on his machine with VoiceStudio (k2-fsa/OmniVoice) from a recording he made for it, and the edit, captions and motion graphics were built with HyperFrames.
 - The team wrote the brief that set the goal, the constraints, the default stack and the review rules, and owns the result.
 
 ## Project layout
