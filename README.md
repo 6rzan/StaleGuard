@@ -6,13 +6,13 @@ StaleGuard finds time-sensitive claims in an LLM answer, re-checks each one agai
 
 **Demo video:** <!-- DEMO VIDEO LINK -->
 
-[![CI](https://github.com/6rzan/ai-global-hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/6rzan/ai-global-hackathon/actions/workflows/ci.yml)
+[![CI](https://github.com/6rzan/StaleGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/6rzan/StaleGuard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## Quick start
 
 ```bash
-git clone https://github.com/6rzan/ai-global-hackathon && cd ai-global-hackathon && docker compose up
+git clone https://github.com/6rzan/StaleGuard && cd StaleGuard && docker compose up
 ```
 
 Then open http://localhost:8000.
