@@ -136,8 +136,11 @@ In `README.md`, replace `<!-- DEMO VIDEO LINK -->` with the link, for example `[
 
 Submit at least 2 hours before the deadline, 15 Nov 2026 23:59 IST (16 Nov 2026 02:29 MYT). In the form:
 
-- Theme: PS06
-- Tick "Tavily integration"
-- Repository link: https://github.com/6rzan/ai-global-hackathon (must be public by then, see item 4)
-- Deck: the files in `docs/pitch/`
-- Video link: the one from item 14
+- Theme: "AI Agents & Intelligent Systems"
+- Problem Statement: "Build a Stale-Answer Detector for AI Applications" (PS06; it requires both Tavily and Bifrost, and StaleGuard uses both)
+- Project Title: StaleGuard
+- Github link: https://github.com/6rzan/ai-global-hackathon (must be public by then, see item 4)
+- Demo Video Link: the one from item 14
+- PPT File: `docs/pitch/StaleGuard-pitch.pptx` from `main`
+- "Are you also integrating a Tavily problem statement into your project?": leave both boxes empty. That question is for projects whose primary statement is a Bifrost one; ours already is the Tavily statement.
+- "Submitting two separate projects?": tick "NA (not applied)" and leave every 2nd-project field empty. This is one project; Bifrost is part of it, not a second submission.
