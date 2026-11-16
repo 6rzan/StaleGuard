@@ -4,15 +4,15 @@ StaleGuard finds time-sensitive claims in an LLM answer, re-checks each one agai
 
 ![StaleGuard demo](docs/media/demo.gif)
 
-**Demo video:** <!-- DEMO VIDEO LINK -->
+**Demo video:** [Watch the 2-minute demo on YouTube](https://youtu.be/an9OuJ4WdCw) (2:14, narrated). The same file is in the repo: [docs/media/staleguard-demo.mp4](docs/media/staleguard-demo.mp4).
 
-[![CI](https://github.com/6rzan/ai-global-hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/6rzan/ai-global-hackathon/actions/workflows/ci.yml)
+[![CI](https://github.com/6rzan/StaleGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/6rzan/StaleGuard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## Quick start
 
 ```bash
-git clone https://github.com/6rzan/ai-global-hackathon && cd ai-global-hackathon && docker compose up
+git clone https://github.com/6rzan/StaleGuard && cd StaleGuard && docker compose up
 ```
 
 Then open http://localhost:8000.
@@ -41,6 +41,10 @@ cd frontend && npm run dev
 
 Open http://localhost:5173. The first command installs both sets of dependencies and only needs to run once.
 
+## The problem
+
+Language models state prices, API versions, laws and who runs a company with full confidence, even when those facts were only true when the model was trained. Nothing in the answer marks which sentences to doubt, so a wrong version number reads exactly like a right one. Support bots, documentation assistants and sales answers are hurt first, because people act on what they say. Checking every claim by hand against the live web is slow, so in practice it often does not happen. StaleGuard splits an answer into claims, searches the live web for the ones that can change, and marks each as current, outdated or unverified, with dated sources and a corrected answer.
+
 ## What it does
 
 The hackathon problem (PS06) asks for four things. This is how each one is covered.
@@ -55,9 +59,9 @@ The hackathon problem (PS06) asks for four things. This is how each one is cover
 Also in the app:
 
 - Ask mode: type a question, a model answers it, then the answer is checked.
-- Corrected answer: when claims are outdated and the sources give a current value, the answer is rewritten with only those statements changed, available as a word diff against the original.
+- Corrected answer: when claims are outdated and the sources give a current value, the answer is rewritten with only those statements changed, available as a word diff against the original. A rewrite that changes any word outside the outdated claims is dropped.
 - Cache: a verified claim is reused for 6 hours (high volatility), 24 hours (medium) or 7 days (low). Cached claims are marked in the UI. Turn it off with `CACHE_ENABLED=false`.
-- History: every check is stored in SQLite and listed in the UI.
+- History: every check is stored in SQLite. Each browser lists the checks it ran itself (it keeps only their ids); `SHARED_HISTORY=true` lists every stored check instead.
 - Export: "Download report" saves the check as a Markdown file.
 - JSON API: `POST /api/checks?wait=true` returns the finished check, so it can sit behind another tool as a verification step.
 
@@ -118,6 +122,9 @@ quality   = confidence * (0.5 * recency + 0.5 * agreement)
 current    -> round(65 + 35 * quality)     65 to 100
 outdated   -> round(35 * (1 - quality))     0 to 35
 unverified -> round(50 - 15 * volatility)   volatility: high 1, medium 0.5, low 0
+
+a current verdict with no supporting source, or an outdated one with no
+contradicting source, becomes unverified before scoring
 
 label: unverified stays unverified; otherwise 75+ fresh, 40 to 74 review, below 40 stale
 overall score: mean of the claim scores, rounded
@@ -222,8 +229,20 @@ All variables are in `.env.example`. The app reads them in `backend/app/config.p
 | `DATABASE_PATH` | SQLite file. | n/a | No | `backend/data/staleguard.db` |
 | `GROQ_API_KEY` | Groq key, read by Bifrost, not by the app. | [console.groq.com](https://console.groq.com/keys) | For the Groq models | empty |
 | `CACHE_ENABLED` | Reuse verified claims for a while. | n/a | No | `true` |
+| `RATE_LIMIT_PER_MINUTE` | Live mode only: most checks one client address can start in a rolling minute. More get `429` with a `Retry-After` header. | n/a | No | `6` |
+| `DAILY_LIVE_CHECKS` | Live mode only: most checks per UTC day across all clients, counted in the SQLite file. More get `429` until the next UTC day. | n/a | No | `100` |
+| `SHARED_HISTORY` | `true` (or `1`) lets `GET /api/checks` list every stored check, with its pasted text, to anyone who can reach the server. Off, that endpoint answers `404`. | n/a | No | `false` |
 
 `DATABASE_PATH` in `.env.example` is `data/staleguard.db`. A relative path is resolved against the `backend/` folder (`backend/app/config.py` does this), wherever the process starts.
+
+### Privacy and deployment
+
+- StaleGuard is not deployed anywhere. It is meant to run on your own machine; Compose publishes its ports on 127.0.0.1 only.
+- It sets no cookies and has no analytics.
+- History is kept per browser: the browser stores only the ids of its own checks and loads each one by id.
+- The backend stores checks (including the pasted text) and the claim cache in a local SQLite file (`DATABASE_PATH`).
+- In mock mode nothing leaves your machine. In live mode the pasted answer (or your question) is sent to Groq through Bifrost, and each flagged claim (as a search query written from it) is sent to Tavily.
+- The UI loads its fonts from Google Fonts.
 
 ## API
 
@@ -233,8 +252,8 @@ Base path `/api`, JSON everywhere. The full shapes are in [`specs/001-stale-answ
 |---|---|---|---|
 | GET | `/api/health` | none | `200` mode, version and configured models |
 | GET | `/api/samples` | none | `200` the bundled sample answers |
-| POST | `/api/checks` | `{"answer": "..."}` or `{"question": "..."}`, optional `?wait=true` | `202 {"id": "..."}`; with `wait=true`, `200` the finished check |
-| GET | `/api/checks` | `?limit=20` (1 to 50) | `200` summaries, newest first |
+| POST | `/api/checks` | `{"answer": "..."}` or `{"question": "..."}`, optional `?wait=true` | `202 {"id": "..."}`; with `wait=true`, `200` the finished check; in live mode `429` over `RATE_LIMIT_PER_MINUTE` or `DAILY_LIVE_CHECKS` |
+| GET | `/api/checks` | `?limit=20` (1 to 50) | `200` summaries, newest first, only with `SHARED_HISTORY=true`; otherwise `404` |
 | GET | `/api/checks/{id}` | none | `200` the check, or `404` |
 
 `answer` is 1 to 8000 characters. With `question` only, the model answers first (ask mode). Validation errors return `422`.
@@ -276,10 +295,10 @@ From the repo root:
 | Gate | Command | Covers |
 |---|---|---|
 | Backend lint | `cd backend && uv run ruff check .` | Python style and import order |
-| Backend tests | `cd backend && uv run pytest -q` | 84 tests (last run: 84 passed): score formula, claim spans, the Bifrost and Tavily clients against a mocked HTTP transport, the pipeline, cache, and the API. No network. |
+| Backend tests | `cd backend && uv run pytest -q` | 107 tests (last run: 107 passed): score formula, claim spans, the Bifrost and Tavily clients against a mocked HTTP transport, the pipeline, cache, and the API. No network. |
 | Frontend lint | `cd frontend && npm run lint` | oxlint with warnings denied |
 | Frontend build | `cd frontend && npm run build` | TypeScript check and Vite bundle |
-| End-to-end | `cd frontend && npm run test:e2e` | 34 Playwright tests (Chromium) plus one opt-in live test, against a mock-mode backend on port 8001 with a temp database: landing, checker, ask mode, history, export, cache, errors, responsive, accessibility (axe), console. First time: `npx playwright install chromium`. `LIVE_E2E=1 npx playwright test e2e/live.spec.ts` runs one real check against a live backend on port 8000. |
+| End-to-end | `cd frontend && npm run test:e2e` | 37 Playwright tests (Chromium) plus one opt-in live test, against a mock-mode backend on port 8001 with a temp database: landing, checker, ask mode, history, export, cache, errors, responsive, accessibility (axe), console. First time: `npx playwright install chromium`. `LIVE_E2E=1 npx playwright test e2e/live.spec.ts` runs one real check against a live backend on port 8000. |
 
 `make test` runs the backend lint, backend tests and frontend lint; `make build` runs the frontend build.
 
@@ -314,6 +333,8 @@ The hackathon rules ask for this to be stated, so plainly:
 - The spec, plan and task list were written by the planner in the GitHub Spec Kit layout.
 - The planner chose the problem statement by scoring the six options against the team's criteria. The scores and every later decision are logged in [docs/DECISIONS.md](docs/DECISIONS.md).
 - Every batch was reviewed (diff read, gates rerun, browser check for UI changes) before it was committed. The review notes are in [specs/001-stale-answer-detector/validation.md](specs/001-stale-answer-detector/validation.md).
+- The interface design follows the structure and look of the "developer tools" demo template from UI UX Pro Max (https://uupm.cc/demo/developer-tools). The code was written for this project, and the `ui-ux-pro-max` and `impeccable` design skills were used while building it.
+- The demo video is a real screen recording of the app in live mode. The narration is Taha's own voice, cloned on his machine with VoiceStudio (k2-fsa/OmniVoice) from a recording he made for it, and the edit, captions and motion graphics were built with HyperFrames.
 - The team wrote the brief that set the goal, the constraints, the default stack and the review rules, and owns the result.
 
 ## Project layout
@@ -351,7 +372,8 @@ More in [docs/TEAM.md](docs/TEAM.md).
 - Verified live on 15 Nov 2026 with real Groq and Tavily keys: `make smoke` passes all three lines, and full checks ran through the UI and through ask mode. The failover was verified too: in a burst of 8 concurrent requests Groq rate-limited 3 on `gpt-oss-120b` and the gateway served them from `gpt-oss-20b`, all 8 succeeded; in a real check the judge call was served by `gpt-oss-20b` and the UI tagged it "fallback".
 - Groq's free tier allows about 8,000 tokens per minute per model. The app retries on HTTP 429 and the gateway fails over from `gpt-oss-120b` to `gpt-oss-20b`; if both models are exhausted in the same minute a claim can still end with an error, so leave about a minute between back-to-back live checks.
 - English only. The prompts and the mock rules assume English text.
-- No authentication and no users. Anyone who can reach the port can run checks, and in live mode that spends your keys. The Compose file publishes ports on 127.0.0.1 only. Do not expose it more widely without adding auth.
+- Built for local use: no authentication and no users. Anyone who can reach the port can run checks and open a check whose id they know; in live mode that spends your keys, up to `RATE_LIMIT_PER_MINUTE` per client address and `DAILY_LIVE_CHECKS` per day. The Compose file publishes ports on 127.0.0.1 only. Do not expose it more widely without adding auth.
+- The per-minute limit is kept in memory and keyed by the client address the server sees, so it resets on restart, and behind a proxy (or Docker's port mapping) all clients may share one address.
 - Live quality depends on the models you configure. A weaker model can miss claims or misjudge a source, and Tavily's snippets are short, so some claims end as `unverified`.
 - A source's date is whatever Tavily returns. A source with no date counts as neutral recency (0.5).
 - Pasted answers are limited to 8000 characters (longer ones get a `422`); questions to 2000. A generated answer longer than 8000 is cut at a sentence boundary.
