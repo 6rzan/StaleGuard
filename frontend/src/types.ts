@@ -47,7 +47,7 @@ export type ScoreBreakdown = {
 export type Claim = {
   id: string; // "c1", "c2", ...
   text: string; // exact substring of Check.answer
-  start: number; // answer.slice(start, end) === text
+  start: number; // code point offsets: Array.from(answer).slice(start, end).join("") === text
   end: number;
   category: Category;
   time_sensitive: boolean;

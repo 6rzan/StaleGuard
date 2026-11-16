@@ -483,14 +483,14 @@ def slide8():
     s = Slide(bg=BG)
     s.notes = (
         "The prototype runs with one command and needs no keys: mock mode uses bundled fictional fixtures and makes no network calls. "
-        "The backend has 84 tests and CI is green on four jobs: backend, frontend, e2e and docker. There are also 34 end-to-end tests. Other tools can call the JSON API as a verification layer. "
+        "The backend has 107 tests and CI is green on four jobs: backend, frontend, e2e and docker. There are also 37 end-to-end tests. Other tools can call the JSON API as a verification layer. "
         "It has also run live: make smoke passed, and through the UI the answer about Python 3.12 and Node.js 20 finished in 13.3 seconds with both claims stale, current values Python 3.15 and Node.js 26 from dated sources, and all 4 model calls on gpt-oss-120b through Bifrost. The screenshot is that run."
     )
     chrome(s, 8, "Working prototype", "A working prototype that runs in one command")
     items = [
         ("One command", "$ docker compose up", True),
         ("Mock mode", "No keys, no network calls", False),
-        ("Tested", "84 backend tests, 34 end-to-end tests; CI green on backend, frontend, e2e and docker", False),
+        ("Tested", "107 backend tests, 37 end-to-end tests; CI green on backend, frontend, e2e and docker", False),
         ("A verification layer", "POST /api/checks?wait=true returns the JSON report", False),
     ]
     for i, (h1, body, mono) in enumerate(items):
@@ -562,7 +562,7 @@ def slide9():
     ])
     s.rect(MX, 6.5, W - 2 * MX, 0.45, fill=CARD, line=BORDER, lw=1.0, r=0.1)
     s.text(MX + 0.25, 6.5, W - 2 * MX - 0.5, 0.45, [
-        runs([("Repo  ", dict(bold=True, color=GREEN, font="mono")), ("https://github.com/6rzan/ai-global-hackathon", dict(font="mono"))], 15),
+        runs([("Repo  ", dict(bold=True, color=GREEN, font="mono")), ("https://github.com/6rzan/StaleGuard", dict(font="mono"))], 15),
     ], anchor="mid")
     return s
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, createCheck, getCheck } from "./api";
+import { rememberCheck } from "./history";
 import type { Check, CheckRequest } from "./types";
 
 const POLL_MS = 1000;
@@ -59,6 +60,7 @@ export function useCheck(onFinished: () => void) {
       setLastId(null);
       try {
         const { id } = await createCheck(req);
+        rememberCheck(id);
         if (mine !== run.current) return;
         setSubmitting(false);
         await follow(id, mine);

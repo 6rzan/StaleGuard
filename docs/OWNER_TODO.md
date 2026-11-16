@@ -1,13 +1,13 @@
 # Owner to-do
 
-Things the build account cannot do (it has write access to the repo, not admin). Each item says who does it and gives the exact command or steps. Commands need the GitHub CLI (`gh auth login` as the repo owner) and use the repository `6rzan/ai-global-hackathon`.
+Things the build account cannot do (it has write access to the repo, not admin). Each item says who does it and gives the exact command or steps. Commands need the GitHub CLI (`gh auth login` as the repo owner) and use the repository `6rzan/StaleGuard`.
 
 ## Taha (repo owner): before going public, in this order
 
 ### 1. Set the description, topics and Discussions
 
 ```bash
-gh repo edit 6rzan/ai-global-hackathon --description "StaleGuard: a stale-answer detector that finds outdated claims in LLM answers, re-verifies them on the live web (Tavily) through the Bifrost gateway, and scores their freshness." --add-topic ai,llm,fact-checking,hallucination-detection,tavily,bifrost,fastapi,react,hackathon --enable-discussions
+gh repo edit 6rzan/StaleGuard --description "StaleGuard: a stale-answer detector that finds outdated claims in LLM answers, re-verifies them on the live web (Tavily) through the Bifrost gateway, and scores their freshness." --add-topic ai,llm,fact-checking,hallucination-detection,tavily,bifrost,fastapi,react,hackathon --enable-discussions
 ```
 
 ### 2. Merge the release
@@ -25,13 +25,13 @@ node ~/.claude/skills/repo-launch-checklist/scripts/audit.mjs --repo .
 ### 4. Make the repo public
 
 ```bash
-gh repo edit 6rzan/ai-global-hackathon --visibility public --accept-visibility-change-consequences
+gh repo edit 6rzan/StaleGuard --visibility public --accept-visibility-change-consequences
 ```
 
 ### 5. Turn on secret scanning and push protection
 
 ```bash
-gh api -X PATCH repos/6rzan/ai-global-hackathon   -f 'security_and_analysis[secret_scanning][status]=enabled'   -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'
+gh api -X PATCH repos/6rzan/StaleGuard   -f 'security_and_analysis[secret_scanning][status]=enabled'   -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'
 ```
 
 ### 6. Turn on Dependabot alerts and security updates
@@ -39,8 +39,8 @@ gh api -X PATCH repos/6rzan/ai-global-hackathon   -f 'security_and_analysis[secr
 `.github/dependabot.yml` already schedules weekly version updates. These two calls enable the alerts and the automatic security pull requests:
 
 ```bash
-gh api -X PUT repos/6rzan/ai-global-hackathon/vulnerability-alerts
-gh api -X PUT repos/6rzan/ai-global-hackathon/automated-security-fixes
+gh api -X PUT repos/6rzan/StaleGuard/vulnerability-alerts
+gh api -X PUT repos/6rzan/StaleGuard/automated-security-fixes
 ```
 
 ### 7. Turn on private vulnerability reporting
@@ -48,7 +48,7 @@ gh api -X PUT repos/6rzan/ai-global-hackathon/automated-security-fixes
 `.github/SECURITY.md` tells people to use it.
 
 ```bash
-gh api -X PUT repos/6rzan/ai-global-hackathon/private-vulnerability-reporting
+gh api -X PUT repos/6rzan/StaleGuard/private-vulnerability-reporting
 ```
 
 ### 8. Protect `main`
@@ -56,7 +56,7 @@ gh api -X PUT repos/6rzan/ai-global-hackathon/private-vulnerability-reporting
 Require a pull request and passing CI. The check names are the job names in `.github/workflows/ci.yml`. The approval count is 0 so the owner can merge their own pull request; raise it to 1 once a second reviewer is active.
 
 ```bash
-gh api -X PUT repos/6rzan/ai-global-hackathon/branches/main/protection --input - <<'JSON'
+gh api -X PUT repos/6rzan/StaleGuard/branches/main/protection --input - <<'JSON'
 {
   "required_status_checks": { "strict": true, "contexts": ["backend", "frontend", "e2e", "docker"] },
   "enforce_admins": false,
@@ -70,10 +70,10 @@ JSON
 
 GitHub has no API for this. In the repo: Settings, General, Social preview, Edit, upload `docs/media/social-preview.png`.
 
-### 10. Set the homepage (only once the video URL exists)
+### 10. Set the homepage to the demo video
 
 ```bash
-gh repo edit 6rzan/ai-global-hackathon --homepage "https://VIDEO-URL"
+gh repo edit 6rzan/StaleGuard --homepage "https://youtu.be/an9OuJ4WdCw"
 ```
 
 ## The team
@@ -124,11 +124,11 @@ Docker Desktop does not start on the build machine. Docker Engine runs inside WS
 
 ### 13. Record the demo video
 
-Follow `docs/pitch/demo-video-script.md` (2 to 3 minutes, live mode). Rehearse once first, because live answers depend on the models.
+Done 15 Nov: `docs/media/staleguard-demo.mp4` (2:14, 1920x1080, narrated, captioned). It is cut from a screen recording of the app in live mode (Groq through Bifrost, Tavily) made with `scripts/record-video.mjs`, with Taha's cloned voice as narration. Uploaded to YouTube: https://youtu.be/an9OuJ4WdCw
 
 ### 14. Put the video link in the README
 
-In `README.md`, replace `<!-- DEMO VIDEO LINK -->` with the link, for example `[Watch on YouTube](https://...)`.
+Done: the README links the YouTube video and the MP4 in the repo. For the HackCulture form use https://youtu.be/an9OuJ4WdCw
 
 ## Esam (team leader)
 
@@ -136,8 +136,11 @@ In `README.md`, replace `<!-- DEMO VIDEO LINK -->` with the link, for example `[
 
 Submit at least 2 hours before the deadline, 15 Nov 2026 23:59 IST (16 Nov 2026 02:29 MYT). In the form:
 
-- Theme: PS06
-- Tick "Tavily integration"
-- Repository link: https://github.com/6rzan/ai-global-hackathon (must be public by then, see item 4)
-- Deck: the files in `docs/pitch/`
-- Video link: the one from item 14
+- Theme: "AI Agents & Intelligent Systems"
+- Problem Statement: "Build a Stale-Answer Detector for AI Applications" (PS06; it requires both Tavily and Bifrost, and StaleGuard uses both)
+- Project Title: StaleGuard
+- Github link: https://github.com/6rzan/StaleGuard (must be public by then, see item 4)
+- Demo Video Link: the one from item 14
+- PPT File: `docs/pitch/StaleGuard-pitch.pptx` from `main`
+- "Are you also integrating a Tavily problem statement into your project?": leave both boxes empty. That question is for projects whose primary statement is a Bifrost one; ours already is the Tavily statement.
+- "Submitting two separate projects?": tick "NA (not applied)" and leave every 2nd-project field empty. This is one project; Bifrost is part of it, not a second submission.

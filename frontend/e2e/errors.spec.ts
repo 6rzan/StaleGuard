@@ -44,6 +44,8 @@ test.describe("API errors", () => {
   test.use({ ignoreConsole: [/Failed to load resource/] });
 
   test("API unreachable: error notice with Retry, then recovery", async ({ page }) => {
+    // History only calls the API for ids this browser remembers.
+    await page.addInitScript(() => window.localStorage.setItem("staleguard.history", JSON.stringify(["deadbeef0000"])));
     await page.route("**/api/**", (route) => route.abort("connectionrefused"));
     const landing = new LandingPage(page);
     const checker = new CheckerPage(page);
