@@ -27,5 +27,5 @@ Live mode, real keys. Follows the demo story in `specs/001-stale-answer-detector
 
 ## After recording
 
-- Put the link in `README.md` at `<!-- DEMO VIDEO LINK -->` and in the HackCulture form.
+- Done: the narrated cut is on YouTube (https://youtu.be/an9OuJ4WdCw), linked in `README.md` and used in the HackCulture form.
 - Keep the recording under 3 minutes. If it runs over, cut the report download (1:25 to 1:40) first.

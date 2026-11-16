@@ -36,7 +36,7 @@ test.describe("landing page", () => {
       "freshness score per claim",
       "backend tests",
     ]);
-    await expect(landing.stats.locator("dd")).toHaveText(["4", "0–100", "84"]);
+    await expect(landing.stats.locator("dd")).toHaveText(["4", "0–100", "107"]);
   });
 
   test("features, how it works, integrations and footer", async () => {
