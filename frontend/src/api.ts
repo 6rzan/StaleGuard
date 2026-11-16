@@ -1,4 +1,4 @@
-import type { Check, CheckRequest, CheckSummary, Health, Sample } from "./types";
+import type { Check, CheckRequest, Health, Sample } from "./types";
 
 export class ApiError extends Error {
   readonly status: number; // 0 = network failure
@@ -37,7 +37,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const getHealth = () => request<Health>("/health");
 export const getSamples = () => request<Sample[]>("/samples");
 export const getCheck = (id: string) => request<Check>(`/checks/${encodeURIComponent(id)}`);
-export const listChecks = (limit = 20) => request<CheckSummary[]>(`/checks?limit=${limit}`);
 export const createCheck = (body: CheckRequest) =>
   request<{ id: string }>("/checks", {
     method: "POST",

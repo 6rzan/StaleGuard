@@ -4,7 +4,9 @@ Progress is saved after every step so polling clients see claims fill in.
 """
 
 import asyncio
+import difflib
 import hashlib
+import re
 import time
 from datetime import UTC, datetime, timedelta
 
@@ -18,6 +20,7 @@ VOLATILITY_RANK = {"high": 0, "medium": 1, "low": 2}
 CONCURRENCY = 4
 MAX_ANSWER_CHARS = 8000
 CACHE_TTL = {"high": timedelta(hours=6), "medium": timedelta(hours=24), "low": timedelta(days=7)}
+UNBACKED = "The sources did not clearly support or contradict this claim."
 
 
 def short_error(exc: Exception) -> str:
@@ -33,14 +36,16 @@ def truncate(text: str, limit: int = MAX_ANSWER_CHARS) -> str:
     return text[: end + 1] if end > 0 else text[:limit]
 
 
-def cache_key(text: str) -> str:
-    return hashlib.sha256(" ".join(text.lower().split()).encode()).hexdigest()
+def cache_key(settings: Settings, text: str) -> str:
+    # Mode and judge model are part of the key, so mock fixtures never answer a live check.
+    key = f"{settings.mode}|{settings.model_judge}|{' '.join(text.lower().split())}"
+    return hashlib.sha256(key.encode()).hexdigest()
 
 
 def cached_verification(
     settings: Settings, claim: Claim, now: datetime
 ) -> CachedVerification | None:
-    row = store.cache_get(settings.database_path, cache_key(claim.text))
+    row = store.cache_get(settings.database_path, cache_key(settings, claim.text))
     if row is None:
         return None
     created_at, data = row
@@ -75,6 +80,14 @@ async def run_check(check_id: str, settings: Settings, llm: LLM, search: Search)
 
 
 def apply(claim: Claim, judgement: Judgement, now: datetime) -> None:
+    # A verdict counts only when at least one source takes that side.
+    backing = {"current": "supports", "outdated": "contradicts"}.get(judgement.verdict)
+    if backing and not any(e.stance == backing for e in claim.evidence):
+        judgement = judgement.model_copy(update={
+            "verdict": "unverified",
+            "current_value": None,
+            "explanation": " ".join(filter(None, (UNBACKED, judgement.explanation))),
+        })
     score, breakdown = score_claim(judgement.verdict, judgement.confidence,
                                    claim.category, claim.volatility, claim.evidence, now)
     claim.verdict = judgement.verdict
@@ -84,6 +97,37 @@ def apply(claim: Claim, judgement: Judgement, now: datetime) -> None:
     claim.freshness_score = score
     claim.score_breakdown = breakdown
     claim.label = label_for(judgement.verdict, score)
+
+
+def rewrite_stays_in_claims(answer: str, rewritten: str, claims: list[Claim]) -> bool:
+    """True when every word-level change lies inside one claim's span (plus edge punctuation)."""
+    old = [m.span() for m in re.finditer(r"\S+", answer)]
+    new = re.findall(r"\S+", rewritten)
+    allowed = []
+    for c in claims:
+        start, end = c.start, c.end
+        while start > 0 and not (answer[start - 1].isalnum() or answer[start - 1].isspace()):
+            start -= 1
+        while end < len(answer) and not (answer[end].isalnum() or answer[end].isspace()):
+            end += 1
+        allowed.append((start, end))
+
+    def inside(lo: int, hi: int) -> bool:
+        return any(start <= lo and hi <= end for start, end in allowed)
+
+    matcher = difflib.SequenceMatcher(None, [answer[a:b] for a, b in old], new, autojunk=False)
+    for tag, i1, i2, _, _ in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+        if i1 < i2:
+            ok = inside(old[i1][0], old[i2 - 1][1])
+        else:
+            # An insertion must sit between two words of the same claim, so text added
+            # before or after a claim (a new sentence, say) is rejected.
+            ok = 0 < i1 < len(old) and inside(old[i1 - 1][0], old[i1][1])
+        if not ok:
+            return False
+    return True
 
 
 async def _run(check: Check, settings: Settings, llm: LLM, search: Search, started: float) -> None:
@@ -177,8 +221,8 @@ async def _run(check: Check, settings: Settings, llm: LLM, search: Search, start
                         confidence=judgement.confidence, current_value=judgement.current_value,
                         explanation=judgement.explanation, evidence=claim.evidence,
                     )
-                    store.cache_put(settings.database_path, cache_key(claim.text), to_iso(now),
-                                    entry.model_dump_json())
+                    store.cache_put(settings.database_path, cache_key(settings, claim.text),
+                                    to_iso(now), entry.model_dump_json())
                 claim.status = "done"
             except Exception as exc:
                 claim.status = "error"
@@ -194,7 +238,8 @@ async def _run(check: Check, settings: Settings, llm: LLM, search: Search, start
         try:
             corrected, call = await llm.rewrite(check.answer, outdated)
             check.model_calls.append(call)
-            check.corrected_answer = corrected
+            if rewrite_stays_in_claims(check.answer, corrected, outdated):
+                check.corrected_answer = corrected
         except Exception:
             pass  # the report stands on its own; corrected_answer stays null
     check.status = "done"

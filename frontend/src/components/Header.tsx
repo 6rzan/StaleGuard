@@ -2,7 +2,7 @@ import type { Health } from "../types";
 
 type Props = { health: Health | null; offline: boolean };
 
-export const REPO_URL = "https://github.com/6rzan/ai-global-hackathon";
+export const REPO_URL = "https://github.com/6rzan/StaleGuard";
 
 export function Logo() {
   return (

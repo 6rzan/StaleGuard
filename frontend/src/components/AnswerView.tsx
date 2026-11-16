@@ -17,16 +17,19 @@ export function AnswerView({ check, activeId, onActive, onOpen }: Props) {
   const generating = answer === "" && check.status === "generating";
   // Claims never overlap; the guard only protects the render from bad data.
   const claims = [...check.claims].sort((a, b) => a.start - b.start);
+  // Claim offsets count code points (as the backend does), not UTF-16 units, so emoji do not shift them.
+  const chars = Array.from(answer);
+  const cut = (from: number, to: number) => chars.slice(from, to).join("");
   const nodes: ReactNode[] = [];
   let cursor = 0;
 
   for (const c of claims) {
-    if (c.start < cursor || c.end > answer.length || c.end <= c.start) continue;
-    if (c.start > cursor) nodes.push(answer.slice(cursor, c.start));
+    if (c.start < cursor || c.end > chars.length || c.end <= c.start) continue;
+    if (c.start > cursor) nodes.push(cut(cursor, c.start));
     const tone = claimTone(c);
     const index = claims.indexOf(c) + 1;
     // Keep the tag on the span's last word so it never wraps onto a line alone.
-    const text = answer.slice(c.start, c.end);
+    const text = cut(c.start, c.end);
     const split = Math.max(0, text.search(/\S+$/));
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -62,7 +65,7 @@ export function AnswerView({ check, activeId, onActive, onOpen }: Props) {
     );
     cursor = c.end;
   }
-  if (cursor < answer.length) nodes.push(answer.slice(cursor));
+  if (cursor < chars.length) nodes.push(cut(cursor, chars.length));
 
   const question = check.question && (
     <p className="question">
