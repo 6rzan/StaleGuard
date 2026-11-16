@@ -136,3 +136,57 @@ async def test_unexpected_failure_ends_check_in_error(settings, monkeypatch):
     assert check.status == "error"
     assert check.error == "Check failed: disk full"
     assert store.get(settings.database_path, "t1").status == "error"
+
+
+class StanceLLM(MockLLM):
+    """Judges every claim with a fixed verdict and stances, to test the evidence rule."""
+
+    def __init__(self, verdict, stances):
+        self.verdict, self.stances = verdict, stances
+
+    async def judge(self, claim, evidence, search_answer, today):
+        judgement, call = await super().judge(claim, evidence, search_answer, today)
+        return judgement.model_copy(update={
+            "verdict": self.verdict, "confidence": 0.9, "current_value": "$25 per month",
+            "explanation": "Judge says so.", "stances": self.stances,
+        }), call
+
+
+@pytest.mark.parametrize(
+    "verdict, stances",
+    [
+        ("current", ["neutral", "neutral", "neutral"]),
+        ("outdated", ["neutral", "neutral", "neutral"]),
+        ("current", ["contradicts", "contradicts", "neutral"]),
+        ("outdated", ["supports", "supports", "neutral"]),
+    ],
+)
+async def test_verdict_without_a_backing_source_is_unverified(settings, verdict, stances):
+    new_check(settings, "The Pro plan costs $20 per month per user.")
+    check = await run_check("t1", settings, StanceLLM(verdict, stances), MockSearch())
+    (c,) = check.claims
+    assert c.status == "done" and len(c.evidence) == 3
+    assert c.verdict == "unverified" and c.label == "unverified"
+    assert c.freshness_score == 35  # unverified, high volatility: never fresh or stale
+    assert c.confidence == 0.9 and c.current_value is None
+    assert c.explanation == (
+        "The sources did not clearly support or contradict this claim. Judge says so."
+    )
+    # Not outdated any more, so nothing is rewritten.
+    assert check.corrected_answer is None
+    assert all(m.stage != "rewrite" for m in check.model_calls)
+
+
+@pytest.mark.parametrize(
+    "verdict, stances, label",
+    [
+        ("current", ["supports", "neutral", "neutral"], "fresh"),
+        ("outdated", ["contradicts", "neutral", "neutral"], "stale"),
+    ],
+)
+async def test_verdict_with_one_backing_source_is_kept(settings, verdict, stances, label):
+    new_check(settings, "The Pro plan costs $20 per month per user.")
+    check = await run_check("t1", settings, StanceLLM(verdict, stances), MockSearch())
+    (c,) = check.claims
+    assert c.verdict == verdict and c.label == label
+    assert c.current_value == "$25 per month" and c.explanation == "Judge says so."

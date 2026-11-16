@@ -21,6 +21,9 @@ class Settings:
     tavily_api_key: str = ""
     max_claims: int = 8
     cache_enabled: bool = True
+    rate_limit_per_minute: int = 6
+    daily_live_checks: int = 100
+    shared_history: bool = False
     database_path: Path = BACKEND_DIR / "data" / "staleguard.db"
 
     @property
@@ -49,5 +52,10 @@ def load_settings() -> Settings:
         tavily_api_key=env.get("TAVILY_API_KEY", ""),
         max_claims=int(env.get("MAX_CLAIMS") or defaults.max_claims),
         cache_enabled=env.get("CACHE_ENABLED", "true").strip().lower() not in ("false", "0"),
+        rate_limit_per_minute=int(
+            env.get("RATE_LIMIT_PER_MINUTE") or defaults.rate_limit_per_minute
+        ),
+        daily_live_checks=int(env.get("DAILY_LIVE_CHECKS") or defaults.daily_live_checks),
+        shared_history=env.get("SHARED_HISTORY", "false").strip().lower() in ("true", "1"),
         database_path=db_path if db_path.is_absolute() else BACKEND_DIR / db_path,
     )

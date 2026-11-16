@@ -87,3 +87,24 @@ Run by the reviewer on 15 Nov 2026 with real keys: backend in live mode on port 
 - The container now runs as a non-root user (uid 10001).
 
 Fresh clone: a clean clone passed `uv sync` + ruff + 84 backend tests, `npm ci` + lint + build, the 34 end-to-end tests, and `docker compose up` (mock mode).
+
+## Audit remediation, 15 Nov 2026
+
+The project is not deployed; it runs locally on the user's own machine. A code audit found seven issues, all fixed on `fix/audit-remediation`.
+
+1. Claim cache: the key now includes the mode and the judge model.
+   A mock result can no longer be served to a live check, nor one judge's result to another.
+2. Verdicts: a verdict needs a backing source.
+   A verdict with no source behind it becomes "unverified".
+3. Corrected answer: the rewrite is kept only if every change stays inside an outdated claim.
+   Any edit outside outdated claims discards the rewrite.
+4. History: it is now per browser (ids in `localStorage`, loaded with `GET /api/checks/{id}`).
+   The list endpoint answers 404 unless `SHARED_HISTORY=true`.
+5. Live-mode limits: 6 checks per minute per client and 100 per UTC day.
+   Mock mode is not limited.
+6. Highlights: claim offsets count code points and the page now cuts the answer by code points.
+   Emoji, including multi-code-point ones, no longer shift a highlight; a new spec covers it.
+7. End-to-end suite: one worker, no retries, reduced motion, 10 s expect timeout.
+   LCP and CLS are recorded as test annotations; LCP is no longer asserted.
+
+Results: backend 107 passed; end-to-end 5 runs of 37 passed (1 live spec skipped) with zero retries.

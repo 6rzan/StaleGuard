@@ -1,7 +1,12 @@
+import dataclasses
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
+from app import main, store
 from app.main import create_app
+from app.mock import MockLLM, MockSearch
 
 
 @pytest.fixture
@@ -47,7 +52,18 @@ def test_check_without_wait_returns_202_and_can_be_polled(client):
     assert check["claims"][0]["label"] == "stale"
 
 
-def test_list_checks_newest_first_with_limit(client):
+def test_list_checks_is_404_unless_shared_history_is_on(client, settings):
+    check_id = client.post("/api/checks", json={"answer": "Answer."}).json()["id"]
+    r = client.get("/api/checks")
+    assert r.status_code == 404
+    assert r.json() == {"detail": "Shared history is turned off"}
+    assert client.get(f"/api/checks/{check_id}").status_code == 200
+    settings.shared_history = True
+    assert [c["id"] for c in client.get("/api/checks").json()] == [check_id]
+
+
+def test_list_checks_newest_first_with_limit(client, settings):
+    settings.shared_history = True
     ids = [client.post("/api/checks", json={"answer": f"Answer {i}."}).json()["id"]
            for i in range(3)]
     listed = client.get("/api/checks?limit=2").json()
@@ -99,3 +115,80 @@ def test_answer_wins_when_both_given(client):
     assert check["answer"] == "Paris is the capital of France."
     assert check["question"] == "Capital?"
     assert all(c["stage"] != "answer" for c in check["model_calls"])
+
+
+# Request limits (live mode only)
+
+
+class CountingLLM(MockLLM):
+    def __init__(self):
+        self.calls = 0
+
+    async def extract_claims(self, answer):
+        self.calls += 1
+        return await super().extract_claims(answer)
+
+
+class Clock:
+    def __init__(self):
+        self.now = datetime(2026, 11, 15, 23, 59, 0, tzinfo=UTC)
+
+    def __call__(self):
+        return self.now
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    c = Clock()
+    monkeypatch.setattr(main, "utcnow", c)
+    return c
+
+
+@pytest.fixture
+def live(settings, monkeypatch):
+    """Live-mode settings served by the mock providers, so nothing touches the network."""
+    llm = CountingLLM()
+    monkeypatch.setattr(main, "get_llm", lambda s: llm)
+    monkeypatch.setattr(main, "get_search", lambda s: MockSearch())
+    live_settings = dataclasses.replace(settings, mock_mode=False)
+    with TestClient(create_app(live_settings)) as c:
+        yield c, llm, live_settings
+
+
+def post(client):
+    return client.post("/api/checks", json={"answer": "Paris is the capital of France."})
+
+
+def stored(settings) -> int:
+    return len(store.list_recent(settings.database_path, 50))
+
+
+def test_live_mode_allows_six_checks_a_minute_per_client(live, clock):
+    client, llm, settings = live
+    assert [post(client).status_code for _ in range(6)] == [202] * 6
+    clock.now += timedelta(seconds=20)
+    r = post(client)
+    assert r.status_code == 429
+    assert r.json() == {"detail": "Too many checks. Wait a minute and try again."}
+    assert r.headers["Retry-After"] == "40"
+    # Rejected before anything was stored or any provider was called.
+    assert llm.calls == 6 and stored(settings) == 6
+    clock.now += timedelta(seconds=41)
+    assert post(client).status_code == 202
+
+
+def test_mock_mode_has_no_request_limit(client, clock):
+    assert all(post(client).status_code == 202 for _ in range(10))
+
+
+def test_live_mode_daily_cap_resets_on_a_new_utc_day(live, clock):
+    client, llm, settings = live
+    settings.daily_live_checks = 2
+    settings.rate_limit_per_minute = 100
+    assert [post(client).status_code for _ in range(2)] == [202, 202]
+    r = post(client)
+    assert r.status_code == 429
+    assert "daily limit" in r.json()["detail"]
+    assert llm.calls == 2 and stored(settings) == 2
+    clock.now += timedelta(minutes=2)  # 00:01 UTC the next day
+    assert post(client).status_code == 202
