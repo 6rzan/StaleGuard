@@ -7,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: backend serving the API and the built frontend.
-FROM python:3.12-slim
+FROM python:3.15-slim
 # Pick up Debian security fixes published after the base image was built.
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv==0.13.5
