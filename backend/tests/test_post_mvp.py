@@ -1,17 +1,19 @@
 """Ask mode (T021), corrected answer (T022), claim cache (T023) and the smoke script (T025)."""
 
+import dataclasses
 import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime, timedelta
 
 import httpx
+import pytest
 
 from app import smoke, store
 from app.config import Settings
 from app.llm import BifrostLLM
 from app.mock import SAMPLES, MockLLM, MockSearch
-from app.models import Check, to_iso
-from app.pipeline import run_check, truncate
+from app.models import Check, Claim, to_iso
+from app.pipeline import rewrite_stays_in_claims, run_check, truncate
 
 ANSWERS = {s["id"]: s["answer"] for s in SAMPLES}
 
@@ -107,6 +109,67 @@ class FailingRewriteLLM(MockLLM):
         raise RuntimeError("rewrite broke")
 
 
+@pytest.mark.parametrize("sample_id", ANSWERS)
+async def test_mock_rewrite_corrects_every_sample(settings, sample_id):
+    c = await check(settings, ANSWERS[sample_id])
+    assert c.corrected_answer and c.corrected_answer != ANSWERS[sample_id]
+
+
+class FixedRewriteLLM(MockLLM):
+    def __init__(self, rewritten):
+        self.rewritten = rewritten
+
+    async def rewrite(self, answer, outdated):
+        _, call = await super().rewrite(answer, outdated)
+        return self.rewritten, call
+
+
+PRO_OLD = "The Pro plan costs $20 per month per user"
+PRO_NEW = "The Pro plan costs $25 per month per user"
+
+
+@pytest.mark.parametrize(
+    "rewritten, kept",
+    [
+        (ANSWERS["pricing"].replace(PRO_OLD, PRO_NEW), True),
+        # The same fix, but whitespace differs and the model wrote the value with more words.
+        ("  " + ANSWERS["pricing"].replace(PRO_OLD, "The Pro plan now costs $25 per user per month")
+         .replace(". ", ".\n") + "\n", True),
+        # Edits a sentence that is not an outdated claim.
+        (ANSWERS["pricing"].replace(PRO_OLD, PRO_NEW).replace("three plans", "four plans"),
+         False),
+        # Appends a new sentence after the last word.
+        (ANSWERS["pricing"].replace(PRO_OLD, PRO_NEW) + " Prices rose again in 2026.", False),
+        # Inserts a new sentence right after the claim.
+        (ANSWERS["pricing"].replace(PRO_OLD + " and includes unlimited projects.",
+                                    PRO_NEW + " and includes unlimited projects. Act now."),
+         False),
+        # Drops a sentence that is not an outdated claim.
+        (ANSWERS["pricing"].replace(PRO_OLD, PRO_NEW)
+         .replace(" Northwind Cloud was started by a group of former network engineers.", ""),
+         False),
+    ],
+)
+async def test_rewrite_is_kept_only_when_changes_stay_in_outdated_claims(settings, rewritten,
+                                                                        kept):
+    c = await check(settings, ANSWERS["pricing"], llm=FixedRewriteLLM(rewritten))
+    assert c.status == "done"
+    assert [m.stage for m in c.model_calls].count("rewrite") == 1
+    assert c.corrected_answer == (rewritten if kept else None)
+
+
+def test_rewrite_check_allows_edge_punctuation_only():
+    answer = "Intro here. Price is $20 (monthly). Outro here."
+    start = answer.index("Price")
+    claim = Claim(id="c1", text="Price is $20 (monthly", start=start,
+                  end=start + len("Price is $20 (monthly"), category="pricing",
+                  time_sensitive=True, volatility="high", risk_reason="", search_query="")
+    fixed = answer.replace("$20 (monthly).", "$25 (monthly)!")
+    assert rewrite_stays_in_claims(answer, fixed, [claim])
+    assert not rewrite_stays_in_claims(answer, fixed.replace("Outro", "Outros"), [claim])
+    assert not rewrite_stays_in_claims(answer, "New start. " + fixed, [claim])
+
+
 async def test_rewrite_failure_still_finishes(settings):
     c = await check(settings, ANSWERS["pricing"], llm=FailingRewriteLLM())
     assert c.status == "done"
@@ -130,6 +193,25 @@ async def test_second_run_is_served_from_cache(settings):
     assert [x.freshness_score for x in second.claims] == [x.freshness_score for x in first.claims]
     assert not any(x.cached for x in first.claims)
     assert second.corrected_answer == first.corrected_answer
+
+
+@pytest.mark.parametrize("first_mock", [True, False])
+async def test_cache_is_not_shared_between_mock_and_live(settings, first_mock):
+    # The providers stay the mocks; only the mode in the settings changes the cache key.
+    first = dataclasses.replace(settings, mock_mode=first_mock)
+    other = dataclasses.replace(settings, mock_mode=not first_mock)
+    await check(first, ANSWERS["api-versions"], check_id="a")
+    switched = await check(other, ANSWERS["api-versions"], check_id="b")
+    assert switched.usage.cache_hits == 0 and switched.usage.search_calls == 3
+    again = await check(first, ANSWERS["api-versions"], check_id="c")
+    assert again.usage.cache_hits == 3
+
+
+async def test_cache_is_not_shared_between_judge_models(settings):
+    await check(settings, ANSWERS["api-versions"], check_id="a")
+    other_judge = dataclasses.replace(settings, model_judge="groq/some-other-model")
+    second = await check(other_judge, ANSWERS["api-versions"], check_id="b")
+    assert second.usage.cache_hits == 0 and second.usage.search_calls == 3
 
 
 async def test_unverified_without_evidence_and_errors_are_not_cached(settings):

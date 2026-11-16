@@ -8,11 +8,20 @@ Field names and enum values here are binding for `backend/app/models.py` and `fr
 |---|---|---|---|
 | GET | `/api/health` | – | `200 Health` |
 | GET | `/api/samples` | – | `200 Sample[]` |
-| POST | `/api/checks` | `CheckRequest` (`?wait=true` optional) | `202 {"id": "..."}`; with `wait=true`: `200 Check` (finished) |
-| GET | `/api/checks` | `?limit=20` (max 50) | `200 CheckSummary[]`, newest first |
+| POST | `/api/checks` | `CheckRequest` (`?wait=true` optional) | `202 {"id": "..."}`; with `wait=true`: `200 Check` (finished); live mode only: `429 {"detail": "..."}` over the request limits |
+| GET | `/api/checks` | `?limit=20` (max 50) | `200 CheckSummary[]`, newest first, only when `SHARED_HISTORY=true`; otherwise `404 {"detail": "..."}` |
 | GET | `/api/checks/{id}` | – | `200 Check` or `404 {"detail": "..."}` |
 
 Validation errors: `422` (FastAPI default body).
+
+Request limits (live mode only; mock mode has none):
+
+- More than `RATE_LIMIT_PER_MINUTE` (default 6) `POST /api/checks` from one client address in a rolling minute: `429 {"detail": "Too many checks. Wait a minute and try again."}` with a `Retry-After` header (seconds).
+- More than `DAILY_LIVE_CHECKS` (default 100) checks in one UTC day: `429 {"detail": "..."}` until the next UTC day.
+
+A rejected request stores nothing and calls no provider.
+
+History: `GET /api/checks` is off by default (`SHARED_HISTORY=false`) because it would list every stored check, with its text, to anyone who can reach the server. The client keeps the ids of its own checks and loads each with `GET /api/checks/{id}`.
 
 The client polls `GET /api/checks/{id}` every second until `status` is `done` or `error`.
 
@@ -53,8 +62,8 @@ type Evidence = {
 type Claim = {
   id: string;                    // "c1", "c2", ...
   text: string;                  // exact substring of Check.answer
-  start: number;                 // answer.slice(start, end) === text
-  end: number;
+  start: number;                 // offsets in Unicode code points, not UTF-16 units:
+  end: number;                   // Array.from(answer).slice(start, end).join("") === text
   category: Category;
   time_sensitive: boolean;
   volatility: Volatility;

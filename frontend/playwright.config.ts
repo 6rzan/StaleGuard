@@ -12,14 +12,18 @@ process.env.E2E_DATABASE ??= join(tmpdir(), `staleguard-e2e-${Date.now()}.db`);
 //   LIVE_E2E=1 npx playwright test e2e/live.spec.ts
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // One worker and no retries: a flake must show up as a failure, not hide behind a second try.
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : 2,
+  retries: 0,
+  workers: 1,
+  expect: { timeout: 10_000 },
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: BASE_URL,
-    trace: "on-first-retry",
+    // The app honours it (no smooth scrolling or animations), so viewport assertions do not race them.
+    reducedMotion: "reduce",
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },

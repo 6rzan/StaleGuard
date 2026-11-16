@@ -1,10 +1,11 @@
 import json
+import math
 import uuid
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,9 +21,34 @@ SAMPLES_PATH = Path(__file__).parent / "fixtures" / "samples.json"
 FRONTEND_DIST = REPO_DIR / "frontend" / "dist"
 
 
+def utcnow() -> datetime:
+    return datetime.now(UTC)  # one clock for the request limits, so tests can move it
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     llm, search = get_llm(settings), get_search(settings)
+    recent_checks: dict[str, list[datetime]] = {}  # client address -> live check times
+
+    def limit_live_checks(client: str) -> None:
+        """Live mode only: per-client checks per minute, then the daily cap. Raises 429."""
+        now = utcnow()
+        recent = [t for t in recent_checks.get(client, []) if now - t < timedelta(minutes=1)]
+        if len(recent) >= settings.rate_limit_per_minute:
+            wait = 60 - (now - recent[0]).total_seconds()
+            raise HTTPException(
+                status_code=429,
+                detail="Too many checks. Wait a minute and try again.",
+                headers={"Retry-After": str(max(1, math.ceil(wait)))},
+            )
+        recent_checks[client] = [*recent, now]
+        if not store.take_daily_slot(
+            settings.database_path, now.date().isoformat(), settings.daily_live_checks
+        ):
+            raise HTTPException(
+                status_code=429,
+                detail="The daily limit of live checks is reached. Try again tomorrow (UTC).",
+            )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -56,8 +82,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/api/checks", response_model=None)
     async def create_check(
-        request: CheckRequest, background: BackgroundTasks, wait: bool = False
+        request: CheckRequest, http: Request, background: BackgroundTasks, wait: bool = False
     ) -> Check | JSONResponse:
+        if not settings.mock_mode:
+            limit_live_checks(http.client.host if http.client else "unknown")
         check = Check(
             id=uuid.uuid4().hex[:12],
             created_at=to_iso(datetime.now(UTC)),
@@ -75,6 +103,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/checks")
     def list_checks(limit: int = Query(20, ge=1, le=50)) -> list[CheckSummary]:
+        # Off by default: the list would show every pasted answer to anyone on the network.
+        if not settings.shared_history:
+            raise HTTPException(status_code=404, detail="Shared history is turned off")
         return [
             CheckSummary(
                 id=c.id,
