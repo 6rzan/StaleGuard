@@ -17,6 +17,9 @@ def init(path: Path) -> None:
             "CREATE TABLE IF NOT EXISTS claim_cache "
             "(key TEXT PRIMARY KEY, created_at TEXT, data TEXT)"
         )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS live_checks (day TEXT PRIMARY KEY, count INTEGER)"
+        )
 
 
 def save(path: Path, check: Check) -> None:
@@ -58,3 +61,16 @@ def cache_put(path: Path, key: str, created_at: str, data: str) -> None:
             "data = excluded.data",
             (key, created_at, data),
         )
+
+
+def take_daily_slot(path: Path, day: str, cap: int) -> bool:
+    """Count one live check against `day`; False when the day already has `cap` checks."""
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(
+            "INSERT INTO live_checks (day, count) VALUES (?, 0) ON CONFLICT(day) DO NOTHING",
+            (day,),
+        )
+        taken = conn.execute(
+            "UPDATE live_checks SET count = count + 1 WHERE day = ? AND count < ?", (day, cap)
+        )
+        return taken.rowcount == 1

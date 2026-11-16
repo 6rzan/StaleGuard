@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getHealth, getSamples, listChecks } from "./api";
+import { getHealth, getSamples } from "./api";
 import { Header } from "./components/Header";
 import { History } from "./components/History";
 import { InputCard } from "./components/InputCard";
 import { ClosingCta, Features, Footer, Hero, HowItWorks, Integrations } from "./components/Landing";
 import { Result } from "./components/Result";
 import { EmptyState, ErrorNotice } from "./components/States";
+import { loadOwnChecks } from "./history";
 import type { CheckSummary, Health, Sample } from "./types";
 import { useCheck } from "./useCheck";
 
@@ -21,7 +22,7 @@ export default function App() {
   const resultRef = useRef<HTMLDivElement>(null);
 
   const loadHistory = useCallback(() => {
-    listChecks(20)
+    loadOwnChecks()
       .then((items) => {
         setHistory(items);
         setHistoryFailed(false);
